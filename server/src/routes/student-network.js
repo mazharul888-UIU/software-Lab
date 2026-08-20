@@ -1,6 +1,7 @@
 const express = require("express");
 const { pool, query } = require("../config/db");
 const { authenticate } = require("../middleware/auth");
+const { ensureProfileSchema } = require("../services/profile-schema");
 const { ensureStudentNetworkSchema } = require("../services/student-network-schema");
 
 const router = express.Router();
@@ -36,6 +37,10 @@ function studentFields(prefix = "") {
           COALESCE(NULLIF(sp.avatar_data, ''), sp.avatar_url) avatar`;
 }
 
+function connectedSocialFields() {
+  return `sp.facebook_url, sp.instagram_url, sp.whatsapp, sp.twitter_url, sp.telegram`;
+}
+
 async function getConnectionForStudent(connectionKey, studentId, { acceptedOnly = false } = {}) {
   const pair = parseConnectionKey(connectionKey);
   if (!pair) return null;
@@ -57,7 +62,7 @@ router.use((req, res, next) => {
 });
 router.use(async (_req, _res, next) => {
   try {
-    await ensureStudentNetworkSchema();
+    await Promise.all([ensureStudentNetworkSchema(), ensureProfileSchema()]);
     next();
   } catch (error) { next(error); }
 });
@@ -158,7 +163,7 @@ router.get("/connections", async (req, res, next) => {
     const [connections, incomingRequests] = await Promise.all([
       query(
         `SELECT CONCAT(c.user_a_id, '-', c.user_b_id) connection_id, c.created_at, c.accepted_at,
-                ${studentFields()}, latest_message.body last_message, message_summary.last_message_at,
+                ${studentFields()}, ${connectedSocialFields()}, latest_message.body last_message, message_summary.last_message_at,
                 COALESCE(message_summary.unread_count, 0) unread_count
          FROM student_connections c
          JOIN users u ON u.id=CASE WHEN c.user_a_id=? THEN c.user_b_id ELSE c.user_a_id END

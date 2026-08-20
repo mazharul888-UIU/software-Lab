@@ -2,16 +2,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
+  Facebook,
+  Instagram,
   LoaderCircle,
   MessageCircle,
+  Phone,
   Search,
   Send,
   Trash2,
+  Twitter,
   UserPlus,
   Users,
   X,
 } from "lucide-react";
 import { apiRequest } from "../../lib/api";
+import { socialProfileHref } from "../../lib/socialProfiles";
 
 const initials = (name) => String(name || "Student")
   .split(/\s+/)
@@ -24,6 +29,14 @@ const initials = (name) => String(name || "Student")
 const profileLine = (student) => [student?.target_role, student?.university]
   .filter(Boolean)
   .join(" · ") || student?.degree || "CareerCube student";
+
+const connectionSocialFields = [
+  { key: "facebook_url", label: "Facebook", Icon: Facebook, tone: "facebook" },
+  { key: "instagram_url", label: "Instagram", Icon: Instagram, tone: "instagram" },
+  { key: "whatsapp", label: "WhatsApp", Icon: Phone, tone: "whatsapp" },
+  { key: "twitter_url", label: "X / Twitter", Icon: Twitter, tone: "twitter" },
+  { key: "telegram", label: "Telegram", Icon: Send, tone: "telegram" },
+];
 
 const displayTime = (value, withDate = false) => {
   if (!value) return "";
@@ -43,6 +56,20 @@ function Avatar({ student, size = "h-10 w-10" }) {
     <span className={`grid shrink-0 place-items-center overflow-hidden rounded-2xl bg-cobalt text-xs font-extrabold text-white ${size}`}>
       {student?.avatar ? <img src={student.avatar} alt="" className="h-full w-full object-cover" /> : initials(student?.name)}
     </span>
+  );
+}
+
+function ConnectionSocialLinks({ student }) {
+  const links = connectionSocialFields
+    .map((item) => ({ ...item, href: socialProfileHref(item.key, student?.[item.key]) }))
+    .filter((item) => item.href);
+  if (!links.length) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Connected social profiles">
+      {links.map(({ key, label, Icon, tone, href }) => (
+        <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={`clay-social-mini social-${tone} grid h-7 w-7 place-items-center rounded-lg`} aria-label={`Open ${student.name}'s ${label}`} title={label}><Icon size={13} /></a>
+      ))}
+    </div>
   );
 }
 
@@ -324,7 +351,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
           {selectedConnection && <>
             <header className="clay-chat-header flex items-center gap-3 border-b border-ink/[0.07] bg-white/45 px-5 py-4 dark:bg-white/[0.025]">
               <Avatar student={selectedConnection} size="h-11 w-11" />
-              <div className="min-w-0 flex-1"><h2 className="truncate font-extrabold">{selectedConnection.name}</h2><p className="truncate text-xs text-muted">{profileLine(selectedConnection)} · Student ID {selectedConnection.student_id}</p></div>
+              <div className="min-w-0 flex-1"><h2 className="truncate font-extrabold">{selectedConnection.name}</h2><p className="truncate text-xs text-muted">{profileLine(selectedConnection)} · Student ID {selectedConnection.student_id}</p><ConnectionSocialLinks student={selectedConnection} /></div>
               <div className="flex shrink-0 items-center gap-1">
                 <button disabled={!messages.length || clearingHistory} onClick={clearHistory} className="btn-ghost min-h-9 px-2 text-xs text-muted hover:text-coral disabled:opacity-45">{clearingHistory ? <LoaderCircle size={14} className="animate-spin" /> : "Clear history"}</button>
                 <button onClick={removeConnection} className="btn-ghost min-h-9 px-2 text-xs text-muted hover:text-coral">Remove</button>

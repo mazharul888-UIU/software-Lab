@@ -7,6 +7,7 @@ const { authenticate, JWT_SECRET } = require("../middleware/auth");
 const { ensureProfileSchema } = require("../services/profile-schema");
 const { ensureMatchingSchema } = require("../services/matching-schema");
 const { sanitizeSkillNames } = require("../services/job-matching");
+const { normalizeSocialProfilePatch } = require("../services/social-profile");
 const { getPlatformSettings } = require("../services/platform-settings");
 const {
   CODE_TTL_MINUTES,
@@ -600,7 +601,8 @@ router.get("/me", authenticate, async (req, res, next) => {
     const rows = await query(
       `SELECT u.id, u.name, u.email, u.role, u.status, p.university, p.degree, p.graduation_year,
               p.target_role, p.career_interests, p.location, p.phone, p.bio, p.readiness_score,
-              p.profile_completion, p.avatar_url, p.avatar_data, p.updated_at
+              p.profile_completion, p.avatar_url, p.avatar_data, p.facebook_url, p.instagram_url,
+              p.whatsapp, p.twitter_url, p.telegram, p.updated_at
        FROM users u LEFT JOIN student_profiles p ON p.user_id = u.id WHERE u.id = ?`,
       [req.user.id],
     );
@@ -641,6 +643,7 @@ router.patch("/me", authenticate, async (req, res, next) => {
       ? String(req.body.avatar_data).trim()
       : null;
     const avatarData = avatarValue || null;
+    const socialProfile = normalizeSocialProfilePatch(req.body);
 
     if (name.length < 2 || name.length > 120) {
       return res.status(400).json({ error: "Name must contain between 2 and 120 characters" });
@@ -683,14 +686,20 @@ router.patch("/me", authenticate, async (req, res, next) => {
     await connection.execute(
       `INSERT INTO student_profiles
          (user_id, university, degree, graduation_year, target_role, career_interests,
-          location, profile_completion, avatar_data)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          location, profile_completion, avatar_data, facebook_url, instagram_url, whatsapp,
+          twitter_url, telegram)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          university=VALUES(university), degree=VALUES(degree),
          graduation_year=VALUES(graduation_year), target_role=VALUES(target_role),
          career_interests=VALUES(career_interests), location=VALUES(location),
          profile_completion=VALUES(profile_completion),
-         avatar_data=IF(?, VALUES(avatar_data), avatar_data)`,
+         avatar_data=IF(?, VALUES(avatar_data), avatar_data),
+         facebook_url=IF(?, VALUES(facebook_url), facebook_url),
+         instagram_url=IF(?, VALUES(instagram_url), instagram_url),
+         whatsapp=IF(?, VALUES(whatsapp), whatsapp),
+         twitter_url=IF(?, VALUES(twitter_url), twitter_url),
+         telegram=IF(?, VALUES(telegram), telegram)`,
       [
         req.user.id,
         university,
@@ -701,7 +710,17 @@ router.patch("/me", authenticate, async (req, res, next) => {
         location,
         profileCompletion,
         avatarData,
+        socialProfile.values.facebook_url,
+        socialProfile.values.instagram_url,
+        socialProfile.values.whatsapp,
+        socialProfile.values.twitter_url,
+        socialProfile.values.telegram,
         avatarProvided ? 1 : 0,
+        socialProfile.provided.facebook_url ? 1 : 0,
+        socialProfile.provided.instagram_url ? 1 : 0,
+        socialProfile.provided.whatsapp ? 1 : 0,
+        socialProfile.provided.twitter_url ? 1 : 0,
+        socialProfile.provided.telegram ? 1 : 0,
       ],
     );
     await syncProfileSkills(connection, req.user.id, profileSkills);
@@ -710,7 +729,8 @@ router.patch("/me", authenticate, async (req, res, next) => {
     const [rows] = await connection.execute(
       `SELECT u.id, u.name, u.email, u.role, u.status, p.university, p.degree, p.graduation_year,
               p.target_role, p.career_interests, p.location, p.phone, p.bio, p.readiness_score,
-              p.profile_completion, p.avatar_url, p.avatar_data, p.updated_at
+              p.profile_completion, p.avatar_url, p.avatar_data, p.facebook_url, p.instagram_url,
+              p.whatsapp, p.twitter_url, p.telegram, p.updated_at
        FROM users u LEFT JOIN student_profiles p ON p.user_id=u.id WHERE u.id=?`,
       [req.user.id],
     );

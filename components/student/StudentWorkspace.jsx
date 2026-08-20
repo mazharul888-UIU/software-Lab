@@ -22,12 +22,14 @@ import {
   Download,
   ExternalLink,
   Eye,
+  Facebook,
   FileCheck2,
   FileText,
   Filter,
   Flame,
   Gauge,
   Heart,
+  Instagram,
   Lightbulb,
   Link2,
   ListChecks,
@@ -36,6 +38,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Pencil,
+  Phone,
   Play,
   Plus,
   RefreshCw,
@@ -48,6 +51,7 @@ import {
   Star,
   Target,
   Trophy,
+  Twitter,
   Upload,
   UserRound,
   Users,
@@ -63,6 +67,7 @@ import {
   resources,
 } from "../../lib/mockData";
 import { apiRequest } from "../../lib/api";
+import { socialProfileApiValue, socialProfileDisplay, socialProfileError, socialProfileHref } from "../../lib/socialProfiles";
 
 const navItems = [
   { id: "overview", label: "Overview", icon: Gauge, group: "Workspace" },
@@ -103,6 +108,18 @@ const getInitials = (name) => String(name || "Student")
   .map((part) => part[0])
   .join("")
   .toUpperCase();
+
+const socialProfileFields = [
+  { key: "facebook_url", label: "Facebook", Icon: Facebook, placeholder: "facebook.com/your.profile", tone: "facebook", maxLength: 500 },
+  { key: "instagram_url", label: "Instagram", Icon: Instagram, placeholder: "@username or instagram.com/username", tone: "instagram", maxLength: 500 },
+  { key: "whatsapp", label: "WhatsApp", Icon: Phone, placeholder: "+8801712345678", tone: "whatsapp", maxLength: 20, type: "tel" },
+  { key: "twitter_url", label: "X / Twitter", Icon: Twitter, placeholder: "@username or x.com/username", tone: "twitter", maxLength: 500 },
+  { key: "telegram", label: "Telegram", Icon: Send, placeholder: "@username or t.me/username", tone: "telegram", maxLength: 32 },
+];
+
+const socialProfileValues = (user = {}) => Object.fromEntries(
+  socialProfileFields.map(({ key }) => [key, user[key] || ""]),
+);
 
 function readStudentUser() {
   try {
@@ -558,6 +575,11 @@ export default function StudentWorkspace() {
           skills: profile.skills,
           location: profile.location,
           avatar_data: profile.avatar,
+          facebook_url: socialProfileApiValue("facebook_url", profile.facebook_url),
+          instagram_url: socialProfileApiValue("instagram_url", profile.instagram_url),
+          whatsapp: socialProfileApiValue("whatsapp", profile.whatsapp),
+          twitter_url: socialProfileApiValue("twitter_url", profile.twitter_url),
+          telegram: socialProfileApiValue("telegram", profile.telegram),
         }),
       });
       localStorage.setItem("careerforge_session", JSON.stringify(nextUser));
@@ -1861,6 +1883,36 @@ function AchievementsPage() {
   );
 }
 
+function SocialProfilePreview({ avatar, name, profile }) {
+  const activeProfiles = socialProfileFields
+    .map((item) => ({
+      ...item,
+      href: socialProfileHref(item.key, profile[item.key]),
+      display: socialProfileDisplay(item.key, profile[item.key]),
+    }))
+    .filter((item) => item.href);
+
+  if (!activeProfiles.length) {
+    return <p className="mt-5 rounded-2xl bg-ink/[0.035] px-3 py-3 text-[10px] leading-4 text-muted dark:bg-white/[0.04]">Add a social profile below to create your contact preview.</p>;
+  }
+
+  return (
+    <div className="mt-5 space-y-2 text-left">
+      {activeProfiles.map(({ key, label, Icon, tone, href, display }) => (
+        <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={`clay-social-card social-${tone} flex items-center gap-3 rounded-2xl p-2.5`} aria-label={`Open ${label} profile`}>
+          <span className="clay-social-avatar relative grid h-10 w-10 shrink-0 place-items-center overflow-visible rounded-xl bg-cobalt text-[10px] font-extrabold text-white">
+            <span className="h-full w-full overflow-hidden rounded-xl">{avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center">{getInitials(name)}</span>}</span>
+            <span className="clay-social-badge absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full text-white"><Icon size={11} /></span>
+          </span>
+          <span className="min-w-0 flex-1"><b className="block text-xs">{label}</b><small className="block truncate text-[9px] text-muted">{display}</small></span>
+          <ExternalLink size={13} className="shrink-0 text-muted" />
+        </a>
+      ))}
+      <p className="px-1 pt-1 text-[9px] leading-4 text-muted">Your CareerCube photo is used as the DP preview. Links open the original social profile.</p>
+    </div>
+  );
+}
+
 function ProfilePage({ user, onSave, notify }) {
   const [avatar, setAvatar] = useState(user.avatar_data || user.avatar_url || null);
   const [saving, setSaving] = useState(false);
@@ -1877,6 +1929,7 @@ function ProfilePage({ user, onSave, notify }) {
     location: user.location || "",
     interests: Array.isArray(user.career_interests) ? user.career_interests : [],
     skills: Array.isArray(user.skills) ? user.skills.map((skill) => typeof skill === "string" ? skill : skill.name).filter(Boolean) : [],
+    ...socialProfileValues(user),
   });
   useEffect(() => {
     setAvatar(user.avatar_data || user.avatar_url || null);
@@ -1890,8 +1943,9 @@ function ProfilePage({ user, onSave, notify }) {
       location: user.location || "",
       interests: Array.isArray(user.career_interests) ? user.career_interests : [],
       skills: Array.isArray(user.skills) ? user.skills.map((skill) => typeof skill === "string" ? skill : skill.name).filter(Boolean) : [],
+      ...socialProfileValues(user),
     });
-  }, [user.name, user.email, user.university, user.degree, user.graduation_year, user.target_role, user.location, user.career_interests, user.skills, user.avatar_data, user.avatar_url]);
+  }, [user.name, user.email, user.university, user.degree, user.graduation_year, user.target_role, user.location, user.career_interests, user.skills, user.avatar_data, user.avatar_url, user.facebook_url, user.instagram_url, user.whatsapp, user.twitter_url, user.telegram]);
   const choosePhoto = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -1917,6 +1971,13 @@ function ProfilePage({ user, onSave, notify }) {
     ].filter(([, value]) => !String(value || "").trim()).map(([label]) => label);
     if (missing.length) {
       notify(`Complete these required fields: ${missing.join(", ")}`);
+      return;
+    }
+    const invalidSocial = socialProfileFields
+      .map(({ key, label }) => ({ label, error: socialProfileError(key, form[key]) }))
+      .find((item) => item.error);
+    if (invalidSocial) {
+      notify(`${invalidSocial.label}: ${invalidSocial.error}`);
       return;
     }
     setSaving(true);
@@ -1962,7 +2023,18 @@ function ProfilePage({ user, onSave, notify }) {
   return (
     <div className="grid gap-5 xl:grid-cols-[.7fr_1.3fr]">
       <aside className="space-y-5">
-        <div className="panel p-6 text-center"><label className={`group relative mx-auto block h-28 w-28 overflow-hidden rounded-[32px] bg-cobalt text-white shadow-lift ${photoLoading ? "cursor-wait opacity-70" : "cursor-pointer"}`}>{avatar ? <img src={avatar} alt={`${form.name || "Student"} profile`} className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-3xl font-extrabold">{getInitials(form.name)}</span>}<span className="absolute inset-0 grid place-items-center bg-ink/50 opacity-0 transition group-hover:opacity-100">{photoLoading ? <RefreshCw className="animate-spin" size={22} /> : <Camera size={22} />}</span><input disabled={photoLoading} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={choosePhoto} /></label><h2 className="mt-4 text-xl font-extrabold">{form.name || "Student"}</h2><p className="mt-1 text-xs text-muted">{form.degree || form.email}</p><p className="mt-2 text-[10px] text-muted">{photoLoading ? "Optimizing photo..." : "Click the photo to upload JPG, PNG or WebP"}</p><span className="tag mt-4 !text-jade"><CheckCircle2 size={12} /> Authenticated student</span></div>
+        <div className="panel p-6 text-center">
+          <label className={`group relative mx-auto block h-28 w-28 overflow-hidden rounded-[32px] bg-cobalt text-white shadow-lift ${photoLoading ? "cursor-wait opacity-70" : "cursor-pointer"}`}>
+            {avatar ? <img src={avatar} alt={`${form.name || "Student"} profile`} className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-3xl font-extrabold">{getInitials(form.name)}</span>}
+            <span className="absolute inset-0 grid place-items-center bg-ink/50 opacity-0 transition group-hover:opacity-100">{photoLoading ? <RefreshCw className="animate-spin" size={22} /> : <Camera size={22} />}</span>
+            <input disabled={photoLoading} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={choosePhoto} />
+          </label>
+          <h2 className="mt-4 text-xl font-extrabold">{form.name || "Student"}</h2>
+          <p className="mt-1 text-xs text-muted">{form.degree || form.email}</p>
+          <p className="mt-2 text-[10px] text-muted">{photoLoading ? "Optimizing photo..." : "Click the photo to upload JPG, PNG or WebP"}</p>
+          <span className="tag mt-4 !text-jade"><CheckCircle2 size={12} /> Authenticated student</span>
+          <SocialProfilePreview avatar={avatar} name={form.name} profile={form} />
+        </div>
         <div className="panel p-5"><h3 className="text-sm font-extrabold">Visibility</h3><div className="mt-4 space-y-3">{[["Open to opportunities", true], ["Show profile in community", true], ["Weekly progress email", false]].map(([label, enabled]) => <label key={label} className="flex items-center justify-between text-xs font-semibold"><span>{label}</span><input type="checkbox" defaultChecked={enabled} className="h-4 w-4 accent-cobalt" /></label>)}</div></div>
       </aside>
       <section className="panel p-6">
@@ -2004,6 +2076,33 @@ function ProfilePage({ user, onSave, notify }) {
           </div>
           {!form.skills.length && <p className="mt-2 text-[10px] font-bold text-coral">Add skills to unlock a reliable AI job match score.</p>}
         </div>
+        <section className="clay-social-editor mt-7 rounded-[24px] border border-ink/[0.07] p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cobalt/10 text-cobalt"><Link2 size={17} /></span>
+            <div><h3 className="text-sm font-extrabold">Social profiles</h3><p className="mt-1 text-[10px] leading-4 text-muted">Optional. Saved links appear in your profile preview and are shared only with accepted CareerCube connections.</p></div>
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {socialProfileFields.map(({ key, label, Icon, placeholder, tone, maxLength, type = "text" }) => {
+              const error = socialProfileError(key, form[key]);
+              return (
+                <label key={key} className="block">
+                  <span className="mb-1.5 flex items-center gap-2 text-xs font-bold"><span className={`social-${tone} text-[var(--social-color)]`}><Icon size={14} /></span>{label}</span>
+                  <input
+                    type={type}
+                    value={form[key]}
+                    maxLength={maxLength}
+                    onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
+                    className={`input ${error ? "!border-coral/60" : ""}`}
+                    placeholder={placeholder}
+                    autoComplete={type === "tel" ? "tel" : "url"}
+                    aria-invalid={Boolean(error)}
+                  />
+                  {error && <small className="mt-1.5 block text-[9px] font-bold leading-4 text-coral">{error}</small>}
+                </label>
+              );
+            })}
+          </div>
+        </section>
         <div className="mt-8 flex justify-end"><button disabled={saving || photoLoading} onClick={submit} className="btn-accent disabled:cursor-not-allowed disabled:opacity-60"><Check size={16} /> {saving ? "Saving..." : photoLoading ? "Preparing photo..." : "Save changes"}</button></div>
       </section>
     </div>

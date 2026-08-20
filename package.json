@@ -24,6 +24,7 @@
     "test:events": "node scripts/events-smoke.cjs",
     "test:community-posts": "node scripts/community-posts-smoke.cjs",
     "test:student-network": "node scripts/student-network-smoke.cjs",
+    "test:social-profile": "node scripts/social-profile-smoke.cjs",
     "test:email-verification": "node scripts/email-verification-smoke.cjs",
     "preview": "vite preview",
     "start:api": "node server/src/app.js",

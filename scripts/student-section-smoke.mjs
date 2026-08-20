@@ -59,6 +59,9 @@ const text = document.getElementById("root")?.textContent?.replace(/\s+/g, " ") 
 if (!text.includes("Profile & preferences")) {
   throw new Error("The saved student section was not restored after a fresh render.");
 }
+if (!text.includes("Social profiles") || !text.includes("WhatsApp") || !text.includes("Telegram")) {
+  throw new Error("The student profile must render the social contact editor.");
+}
 
 console.log(JSON.stringify({ status: "passed", restoredSection: "profile" }));
 await window.happyDOM.close();

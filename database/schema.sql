@@ -53,6 +53,11 @@ CREATE TABLE IF NOT EXISTS student_profiles (
   bio TEXT NULL,
   avatar_url VARCHAR(500) NULL,
   avatar_data LONGTEXT NULL,
+  facebook_url VARCHAR(500) NULL,
+  instagram_url VARCHAR(500) NULL,
+  whatsapp VARCHAR(20) NULL,
+  twitter_url VARCHAR(500) NULL,
+  telegram VARCHAR(32) NULL,
   resume_url VARCHAR(500) NULL,
   readiness_score DECIMAL(5,2) NOT NULL DEFAULT 0,
   profile_completion DECIMAL(5,2) NOT NULL DEFAULT 0,
@@ -205,6 +210,24 @@ ALTER TABLE applications
 
 ALTER TABLE student_profiles
   ADD COLUMN IF NOT EXISTS career_interests JSON NULL AFTER target_role;
+
+ALTER TABLE student_profiles
+  ADD COLUMN IF NOT EXISTS avatar_data LONGTEXT NULL AFTER avatar_url;
+
+ALTER TABLE student_profiles
+  ADD COLUMN IF NOT EXISTS facebook_url VARCHAR(500) NULL AFTER avatar_data;
+
+ALTER TABLE student_profiles
+  ADD COLUMN IF NOT EXISTS instagram_url VARCHAR(500) NULL AFTER facebook_url;
+
+ALTER TABLE student_profiles
+  ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(20) NULL AFTER instagram_url;
+
+ALTER TABLE student_profiles
+  ADD COLUMN IF NOT EXISTS twitter_url VARCHAR(500) NULL AFTER whatsapp;
+
+ALTER TABLE student_profiles
+  ADD COLUMN IF NOT EXISTS telegram VARCHAR(32) NULL AFTER twitter_url;
 
 CREATE TABLE IF NOT EXISTS assessments (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
