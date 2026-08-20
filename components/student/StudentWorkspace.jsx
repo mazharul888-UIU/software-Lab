@@ -917,7 +917,7 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
           <div className="mt-6 grid gap-4 md:grid-cols-[180px_1fr] md:items-center">
             <div
               className="relative mx-auto grid h-40 w-40 place-items-center rounded-full"
-              style={{ background: `conic-gradient(#3155C6 0 ${readinessScore}%, rgba(30,36,48,.08) ${readinessScore}% 100%)` }}
+              style={{ background: `conic-gradient(var(--cobalt) 0 ${readinessScore}%, var(--clay-line) ${readinessScore}% 100%)` }}
             >
               <div className="grid h-[124px] w-[124px] place-items-center rounded-full bg-paper text-center shadow-inner">
                 <span><b className="block text-3xl tracking-[-0.05em]">{readinessScore}%</b><small className="text-[10px] font-bold uppercase tracking-[.12em] text-muted">Calculated</small></span>

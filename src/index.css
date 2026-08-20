@@ -2431,6 +2431,107 @@ body {
     inset 0 -1px 0 rgba(255, 255, 255, 0.035);
 }
 
+/* Theme contrast corrections -------------------------------------------------
+   Tailwind's named utilities are compiled from the light palette. Re-map the
+   semantic text colors in dark mode and keep chat copy explicit in both themes
+   so raised clay surfaces never inherit an unreadable foreground. */
+:root[data-theme="dark"] .bg-paper {
+  background-color: var(--paper) !important;
+}
+
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] .text-muted\/65,
+:root[data-theme="dark"] .text-muted\/70 {
+  color: #b8becb !important;
+}
+
+:root[data-theme="dark"] [class~="text-cobalt"],
+:root[data-theme="dark"] [class~="!text-cobalt"],
+:root[data-theme="dark"] [class~="text-cobalt/60"] {
+  color: #a9baff !important;
+}
+
+:root[data-theme="dark"] [class~="text-jade"],
+:root[data-theme="dark"] [class~="!text-jade"] {
+  color: #8ed7b7 !important;
+}
+
+:root[data-theme="dark"] [class~="text-coral"],
+:root[data-theme="dark"] [class~="!text-coral"] {
+  color: #ffad91 !important;
+}
+
+:root[data-theme="dark"] [class~="text-plum"],
+:root[data-theme="dark"] [class~="!text-plum"] {
+  color: #d9aecb !important;
+}
+
+:root[data-theme="dark"] .text-white\/45 {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+:root[data-theme="dark"] .text-white\/50,
+:root[data-theme="dark"] .text-white\/55,
+:root[data-theme="dark"] .text-white\/60 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+:root[data-theme="dark"] .text-white\/65,
+:root[data-theme="dark"] .text-white\/70 {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+:root:not([data-theme="dark"]) .clay-message-incoming,
+:root:not([data-theme="dark"]) .clay-message-incoming p {
+  color: #172033 !important;
+}
+
+:root:not([data-theme="dark"]) .clay-message-incoming small {
+  color: #566176 !important;
+}
+
+.clay-message-outgoing,
+.clay-message-outgoing p {
+  color: #ffffff !important;
+}
+
+.clay-message-outgoing small {
+  color: rgba(255, 255, 255, 0.76) !important;
+}
+
+:root[data-theme="dark"] .clay-message-incoming p {
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .clay-message-incoming small {
+  color: #c5ccda !important;
+}
+
+:root[data-theme="dark"] .resume-paper {
+  background-color: #ffffff !important;
+  color: #1e2430 !important;
+}
+
+:root[data-theme="dark"] .resume-paper [class~="text-cobalt"],
+:root[data-theme="dark"] .resume-paper [class~="!text-cobalt"] {
+  color: #3155c6 !important;
+}
+
+:root[data-theme="dark"] .resume-paper [class~="text-coral"],
+:root[data-theme="dark"] .resume-paper [class~="!text-coral"] {
+  color: #c86d50 !important;
+}
+
+:root[data-theme="dark"] .resume-paper [class~="text-jade"],
+:root[data-theme="dark"] .resume-paper [class~="!text-jade"] {
+  color: #4e7864 !important;
+}
+
+:root[data-theme="dark"] .resume-paper [class~="text-plum"],
+:root[data-theme="dark"] .resume-paper [class~="!text-plum"] {
+  color: #79546d !important;
+}
+
 @media (hover: hover) {
   .panel:hover,
   .metric-card:hover {
