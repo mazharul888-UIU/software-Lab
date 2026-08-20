@@ -56,10 +56,10 @@ export default function DashboardShell({
     <>
       <div className="flex h-[78px] items-center justify-between px-5">
         <Brand href={role === "admin" ? "/admin" : "/student"} />
-        <button onClick={() => setMobileOpen(false)} className="btn-ghost md:hidden"><X size={18} /></button>
+        <button onClick={() => setMobileOpen(false)} className="btn-ghost md:hidden" aria-label="Close navigation"><X size={18} /></button>
       </div>
       {role === "admin" && (
-        <div className="mx-4 mb-4 rounded-2xl border border-ink/[0.07] bg-white/60 p-3">
+        <div className="clay-sidebar-status mx-4 mb-4 rounded-2xl border border-ink/[0.07] bg-white/60 p-3">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted">Operations workspace</p>
           <div className="mt-2 flex items-center gap-3">
             <div className="relative h-8 flex-1 overflow-hidden rounded-full bg-ink/[0.08]">
@@ -81,7 +81,7 @@ export default function DashboardShell({
           </div>
         ))}
       </nav>
-      <div className="border-t border-ink/[0.07] p-3">
+      <div className="clay-sidebar-footer border-t border-ink/[0.07] p-3">
         <button onClick={logout} className="dash-side-link text-coral hover:bg-coral/10 hover:text-coral">
           <LogOut size={17} /> Sign out
         </button>
@@ -90,19 +90,19 @@ export default function DashboardShell({
   );
 
   return (
-    <main className="min-h-screen bg-canvas">
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[250px] flex-col border-r border-white/80 bg-white/55 backdrop-blur-2xl md:flex">
+    <main className="app-clay-shell min-h-screen bg-canvas">
+      <aside className="clay-dashboard-sidebar fixed inset-y-0 left-0 z-50 hidden w-[250px] flex-col border-r border-white/80 bg-white/55 backdrop-blur-2xl md:flex">
         {sidebar}
       </aside>
       {mobileOpen && (
         <div className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}>
-          <aside className="flex h-full w-[280px] flex-col bg-canvas shadow-lift" onClick={(event) => event.stopPropagation()}>{sidebar}</aside>
+          <aside className="clay-dashboard-sidebar flex h-full w-[280px] flex-col bg-canvas shadow-lift" onClick={(event) => event.stopPropagation()}>{sidebar}</aside>
         </div>
       )}
 
       <div className="min-h-screen md:pl-[250px]">
-        <header className="sticky top-0 z-40 flex h-[78px] items-center gap-3 border-b border-white/80 bg-canvas/80 px-4 backdrop-blur-2xl sm:px-7">
-          <button onClick={() => setMobileOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl bg-ink text-white md:hidden"><Menu size={18} /></button>
+        <header className="clay-dashboard-topbar sticky top-0 z-40 flex h-[78px] items-center gap-3 border-b border-white/80 bg-canvas/80 px-4 backdrop-blur-2xl sm:px-7">
+          <button onClick={() => setMobileOpen(true)} className="clay-icon-button grid h-10 w-10 place-items-center rounded-xl bg-ink text-white md:hidden" aria-label="Open navigation"><Menu size={18} /></button>
           <form className="relative hidden max-w-sm flex-1 lg:block" onSubmit={(event) => { event.preventDefault(); onSearchSubmit?.(); }}>
             <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
             <input
@@ -114,12 +114,12 @@ export default function DashboardShell({
           </form>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
-            <button className="relative grid h-10 w-10 place-items-center rounded-xl border border-ink/[0.08] bg-white/60 text-muted transition hover:bg-white hover:text-ink">
+            <button className="clay-icon-button relative grid h-10 w-10 place-items-center rounded-xl border border-ink/[0.08] bg-white/60 text-muted transition hover:bg-white hover:text-ink" aria-label="Notifications">
               <Bell size={17} />
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-coral" />
             </button>
             <div className="relative">
-              <button onClick={() => setProfileOpen(!profileOpen)} className="flex h-11 items-center gap-2 rounded-2xl border border-ink/[0.08] bg-white/60 pl-1.5 pr-2.5 transition hover:bg-white">
+              <button onClick={() => setProfileOpen(!profileOpen)} className="clay-profile-button flex h-11 items-center gap-2 rounded-2xl border border-ink/[0.08] bg-white/60 pl-1.5 pr-2.5 transition hover:bg-white" aria-haspopup="menu" aria-expanded={profileOpen}>
                 <span className={`grid h-8 w-8 place-items-center overflow-hidden rounded-xl text-xs font-extrabold text-white ${role === "admin" ? "bg-plum" : "bg-cobalt"}`}>{profileAvatar ? <img src={profileAvatar} alt="" className="h-full w-full object-cover" /> : name.split(" ").map((x) => x[0]).slice(0, 2).join("")}</span>
                 <span className="hidden text-left sm:block">
                   <b className="block max-w-28 truncate text-xs">{name}</b>
@@ -128,7 +128,7 @@ export default function DashboardShell({
                 <ChevronDown className="text-muted" size={14} />
               </button>
               {profileOpen && (
-                <div className="glass-strong absolute right-0 top-14 w-52 animate-enter rounded-2xl p-2">
+                <div className="clay-popover glass-strong absolute right-0 top-14 w-52 animate-enter rounded-2xl p-2" role="menu">
                   <button onClick={() => { navigate(role === "admin" ? "settings" : "profile"); setProfileOpen(false); }} className="dash-side-link">Account settings</button>
                   <button onClick={logout} className="dash-side-link text-coral"><LogOut size={16} /> Sign out</button>
                 </div>
@@ -137,8 +137,8 @@ export default function DashboardShell({
           </div>
         </header>
 
-        <div className="px-4 pb-10 pt-6 sm:px-7 lg:px-9">
-          <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="clay-dashboard-content px-4 pb-10 pt-6 sm:px-7 lg:px-9">
+          <div className="clay-page-heading mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.15em] text-cobalt">{role === "admin" ? "CareerCube control center" : "My CareerCube"}</p>
               <h1 className="text-2xl font-extrabold tracking-[-0.04em] sm:text-3xl">{title}</h1>

@@ -28,7 +28,7 @@ const circles = [
 
 export default function CommunityLandingPage() {
   return (
-    <main className="noise min-h-screen overflow-hidden">
+    <main className="clay-app public-clay-page noise min-h-screen overflow-hidden">
       <PublicHeader current="community" />
 
       <section className="page-shell pb-16 pt-14 sm:pb-24 sm:pt-20">

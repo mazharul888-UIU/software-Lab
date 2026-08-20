@@ -43,7 +43,7 @@ export function PublicHeader({ current = "" }) {
 
   return (
     <header className="public-header page-shell sticky top-0 z-50 pt-4">
-      <nav aria-label="Primary navigation" className="glass public-nav flex h-[70px] items-center justify-between rounded-[22px] px-4 sm:px-5">
+      <nav aria-label="Primary navigation" className="clay-public-nav glass public-nav flex h-[70px] items-center justify-between rounded-[22px] px-4 sm:px-5">
         <Brand href="/" />
         <div className="hidden items-center gap-1 lg:flex">
           {navigation.map((item) => (
@@ -61,7 +61,7 @@ export function PublicHeader({ current = "" }) {
           <ThemeToggle />
           <button
             onClick={() => setMenuOpen((open) => !open)}
-            className="grid h-10 w-10 place-items-center rounded-xl bg-ink text-white"
+            className="clay-icon-button grid h-10 w-10 place-items-center rounded-xl bg-ink text-white"
             aria-label="Toggle navigation menu"
             aria-expanded={menuOpen}
             aria-controls="public-mobile-navigation"
@@ -72,7 +72,7 @@ export function PublicHeader({ current = "" }) {
       </nav>
 
       {menuOpen && (
-        <div id="public-mobile-navigation" className="glass-strong absolute left-5 right-5 top-[5.65rem] z-50 animate-enter rounded-[22px] p-3 sm:hidden">
+        <div id="public-mobile-navigation" className="clay-popover glass-strong absolute left-5 right-5 top-[5.65rem] z-50 animate-enter rounded-[22px] p-3 sm:hidden">
           {navigation.map((item) => (
             <PublicNavLink
               key={item.label}
@@ -94,7 +94,7 @@ export function PublicHeader({ current = "" }) {
 
 export function PublicFooter() {
   return (
-    <footer className="border-t border-ink/[0.08] py-8">
+    <footer className="clay-public-footer border-t border-ink/[0.08] py-8">
       <div className="page-shell flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
         <Brand href="/" />
         <p className="text-xs text-muted">© 2026 CareerCube. Built for the careers still becoming.</p>

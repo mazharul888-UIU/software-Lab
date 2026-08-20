@@ -56,7 +56,7 @@ const orbitItems = ["Profile", "Assess", "Match", "Apply"];
 
 export default function LandingPage() {
   return (
-    <main className="noise min-h-screen overflow-hidden">
+    <main className="clay-app noise min-h-screen overflow-hidden">
       <PublicHeader />
 
       <section className="landing-clay-hero page-shell relative pb-14 pt-8 sm:pb-20 sm:pt-12 lg:pb-24">

@@ -3,7 +3,7 @@ import { freshPath } from "../lib/sessionNavigation";
 export default function Brand({ href = "/", compact = false }) {
   return (
     <a href={freshPath(href)} className="inline-flex items-center gap-2.5 text-ink" aria-label="CareerCube home">
-      <span className="grid h-9 w-9 place-items-center rounded-[13px] bg-ink text-white shadow-md">
+      <span className="clay-brand-mark grid h-9 w-9 place-items-center rounded-[13px] bg-ink text-white shadow-md">
         <img
           src="/careercube-mark-forward-v1.png"
           alt=""

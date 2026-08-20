@@ -36,7 +36,7 @@ export default function ResourcesLandingPage() {
   }, [category, query]);
 
   return (
-    <main className="noise min-h-screen overflow-hidden">
+    <main className="clay-app public-clay-page noise min-h-screen overflow-hidden">
       <PublicHeader current="resources" />
 
       <section className="page-shell pb-16 pt-14 sm:pb-24 sm:pt-20">
@@ -98,6 +98,7 @@ export default function ResourcesLandingPage() {
             <button
               key={item}
               onClick={() => setCategory(item)}
+              aria-pressed={category === item}
               className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition ${category === item ? "bg-ink text-white shadow-lg" : "border border-ink/10 bg-white/60 text-muted hover:text-ink"}`}
             >
               {item}

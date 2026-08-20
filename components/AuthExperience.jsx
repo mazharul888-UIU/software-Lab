@@ -341,8 +341,8 @@ export default function AuthExperience({ role = "student" }) {
   };
 
   return (
-    <main className="min-h-screen bg-canvas p-3 sm:p-5">
-      <div className="mx-auto grid min-h-[calc(100vh-24px)] max-w-[1500px] overflow-hidden rounded-[30px] border border-white/75 bg-white/55 shadow-lift backdrop-blur-xl sm:min-h-[calc(100vh-40px)] lg:grid-cols-[.95fr_1.05fr]">
+    <main className="auth-clay-shell min-h-screen bg-canvas p-3 sm:p-5">
+      <div className="auth-clay-frame mx-auto grid min-h-[calc(100vh-24px)] max-w-[1500px] overflow-hidden rounded-[30px] border border-white/75 bg-white/55 shadow-lift backdrop-blur-xl sm:min-h-[calc(100vh-40px)] lg:grid-cols-[.95fr_1.05fr]">
         <section className="auth-media-panel relative hidden overflow-hidden bg-[#DED2BE] p-8 lg:block">
           <AuthVisual role={isAdmin ? "admin" : "student"} />
           <div className="auth-brand-card absolute left-8 top-8 glass-strong rounded-2xl px-4 py-3">
@@ -369,7 +369,7 @@ export default function AuthExperience({ role = "student" }) {
           </div>
         </section>
 
-        <section className="flex min-h-full flex-col p-5 sm:p-8 lg:p-12 xl:p-16">
+        <section className="auth-clay-form-panel flex min-h-full flex-col p-5 sm:p-8 lg:p-12 xl:p-16">
           <div className="flex items-center justify-between">
             <div className="lg:hidden"><Brand /></div>
             <div className="ml-auto flex items-center gap-2">
@@ -380,7 +380,7 @@ export default function AuthExperience({ role = "student" }) {
 
           <div className="mx-auto my-auto w-full max-w-[470px] py-10">
             <div className="mb-8">
-              <span className={`mb-5 grid h-12 w-12 place-items-center rounded-[18px] text-white ${isAdmin ? "bg-plum" : "bg-cobalt"}`}>
+              <span className={`auth-clay-intro-icon mb-5 grid h-12 w-12 place-items-center rounded-[18px] text-white ${isAdmin ? "bg-plum" : "bg-cobalt"}`}>
                 {isAdmin ? <LockKeyhole size={21} /> : passwordResetActive ? passwordReset?.stage === "password" ? <LockKeyhole size={21} /> : <Mail size={21} /> : verificationActive ? <Mail size={21} /> : <User size={21} />}
               </span>
               <h2 className="font-display text-4xl leading-none tracking-[-0.045em] sm:text-5xl">
@@ -406,12 +406,13 @@ export default function AuthExperience({ role = "student" }) {
             </div>
 
             {!isAdmin && !passwordResetActive && (
-              <div className="mb-7 grid grid-cols-2 rounded-2xl bg-ink/[0.055] p-1">
+              <div className="auth-clay-tabs mb-7 grid grid-cols-2 rounded-2xl bg-ink/[0.055] p-1">
                 {["login", "register"].map((item) => (
                   <button
                     key={item}
                     disabled={item === "register" && !platformConfig.features.registrationEnabled}
                     onClick={() => { setMode(item); setError(""); setSuccess(""); setShowPassword(false); }}
+                    aria-pressed={mode === item}
                     className={`min-h-10 rounded-xl text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${mode === item ? "bg-white text-ink shadow-sm" : "text-muted"}`}
                   >
                     {item === "login" ? "Sign in" : "Create account"}
