@@ -1490,7 +1490,7 @@ function AssessmentsPage({
 
   return (
     <div className="space-y-5">
-      <section className="panel overflow-hidden bg-ink text-white">
+      <section className="clay-accent-panel panel overflow-hidden bg-ink text-white">
         <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <span className="eyebrow !text-[#AFC0FF]"><Sparkles size={13} /> Gemini adaptive journey</span>
@@ -1503,26 +1503,26 @@ function AssessmentsPage({
             {adaptiveLoading ? (
               <p className="mt-5 flex items-center gap-2 text-xs font-bold text-white/70"><RefreshCw className="animate-spin" size={14} /> Loading your assessment path...</p>
             ) : adaptiveError ? (
-              <div className="mt-5 flex flex-wrap items-center gap-3"><span className="text-xs font-bold text-coral">{adaptiveError}</span><button onClick={onRetryAdaptive} className="btn-secondary min-h-9 !border-white/15 !bg-white/10 !text-white"><RefreshCw size={14} /> Retry</button></div>
+              <div className="mt-5 flex flex-wrap items-center gap-3"><span className="text-xs font-bold text-coral">{adaptiveError}</span><button onClick={onRetryAdaptive} className="clay-hero-ghost-button btn-secondary min-h-9"><RefreshCw size={14} /> Retry</button></div>
             ) : !adaptive?.profileReady ? (
               <div className="mt-5">
                 <p className="text-xs font-bold text-[#FFD1C5]">Required first: {(adaptive?.missingFields || []).join(", ") || "personal and career details"}</p>
-                <button onClick={onCompleteProfile} className="btn-accent mt-3 !bg-white !text-ink">Complete career profile <ArrowRight size={15} /></button>
+                <button onClick={onCompleteProfile} className="clay-hero-button btn-accent mt-3">Complete career profile <ArrowRight size={15} /></button>
               </div>
             ) : !adaptive?.aiConfigured ? (
               <div className="mt-5 rounded-2xl border border-coral/30 bg-coral/10 p-4 text-xs leading-5 text-[#FFD1C5]">The feature is implemented, but the server needs a private <b>GEMINI_API_KEY</b> environment variable before it can generate real questions.</div>
             ) : program?.status === "completed" ? (
               <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-jade/15 px-4 py-3 text-xs font-bold text-[#BEE8D5]"><Trophy size={16} /> Expert journey completed</div>
             ) : (
-              <button onClick={onStartAdaptive} className="btn-accent mt-5 !bg-white !text-ink">
+              <button onClick={onStartAdaptive} className="clay-hero-button btn-accent mt-5">
                 {adaptive?.activeAttempt ? "Resume current level" : `Generate level ${currentLevel}`} <ArrowRight size={16} />
               </button>
             )}
           </div>
           <div className="grid grid-cols-3 gap-3 lg:w-80">
-            <div className="rounded-2xl bg-white/10 p-4"><b className="block text-2xl">{program?.highestLevelCompleted || 0}/10</b><small className="text-[10px] font-bold uppercase tracking-wider text-white/50">Levels</small></div>
-            <div className="rounded-2xl bg-white/10 p-4"><b className="block text-2xl">{accuracy}%</b><small className="text-[10px] font-bold uppercase tracking-wider text-white/50">Accuracy</small></div>
-            <div className="rounded-2xl bg-white/10 p-4"><b className="block text-2xl">12m</b><small className="text-[10px] font-bold uppercase tracking-wider text-white/50">Per level</small></div>
+            <div className="clay-accent-stat rounded-2xl bg-white/10 p-4"><b className="block text-2xl">{program?.highestLevelCompleted || 0}/10</b><small className="text-[10px] font-bold uppercase tracking-wider text-white/50">Levels</small></div>
+            <div className="clay-accent-stat rounded-2xl bg-white/10 p-4"><b className="block text-2xl">{accuracy}%</b><small className="text-[10px] font-bold uppercase tracking-wider text-white/50">Accuracy</small></div>
+            <div className="clay-accent-stat rounded-2xl bg-white/10 p-4"><b className="block text-2xl">12m</b><small className="text-[10px] font-bold uppercase tracking-wider text-white/50">Per level</small></div>
           </div>
         </div>
       </section>
@@ -1591,9 +1591,9 @@ function LegacyAssessmentsPage({ assessments, loading, error, onRetry, onStart }
   return (
     <div className="space-y-5">
       <section className="grid gap-4 md:grid-cols-3">
-        <div className="panel col-span-2 overflow-hidden bg-ink p-6 text-white md:col-span-2">
+        <div className="clay-accent-panel panel col-span-2 overflow-hidden bg-ink p-6 text-white md:col-span-2">
           <div className="flex items-start justify-between gap-5">
-            <div><span className="eyebrow !text-[#AFC0FF]"><Sparkles size={13} /> Recommended next</span><h2 className="mt-3 text-2xl font-extrabold tracking-[-0.04em]">{recommended.title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-white/60">{recommended.description || `Measure your ${recommended.category.toLowerCase()} knowledge with administrator-published questions.`}</p><button onClick={() => onStart(recommended)} className="btn-accent mt-5 !bg-white !text-ink">Start {recommended.time_limit_minutes}-minute assessment <ArrowRight size={16} /></button></div>
+            <div><span className="eyebrow !text-[#AFC0FF]"><Sparkles size={13} /> Recommended next</span><h2 className="mt-3 text-2xl font-extrabold tracking-[-0.04em]">{recommended.title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-white/60">{recommended.description || `Measure your ${recommended.category.toLowerCase()} knowledge with administrator-published questions.`}</p><button onClick={() => onStart(recommended)} className="clay-hero-button btn-accent mt-5">Start {recommended.time_limit_minutes}-minute assessment <ArrowRight size={16} /></button></div>
             <span className="hidden h-28 w-28 shrink-0 place-items-center rounded-full border-[18px] border-jade text-center sm:grid"><span><b className="block text-2xl">{recommended.question_count}</b><small className="text-[9px] uppercase tracking-wider text-white/60">questions</small></span></span>
           </div>
         </div>

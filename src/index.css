@@ -2532,6 +2532,37 @@ body {
   color: #79546d !important;
 }
 
+/* Dark accent boards keep the same readable treatment in either app theme. */
+.clay-accent-panel .clay-hero-button,
+:root[data-theme="dark"] .clay-accent-panel .clay-hero-button {
+  border-color: rgba(255, 255, 255, 0.78) !important;
+  background: linear-gradient(145deg, #ffffff, #e8ecf7) !important;
+  color: #172033 !important;
+  box-shadow:
+    8px 10px 20px rgba(0, 0, 0, 0.26),
+    inset 1px 1px 1px rgba(255, 255, 255, 0.92),
+    inset -2px -2px 5px rgba(58, 70, 101, 0.14);
+}
+
+.clay-accent-panel .clay-hero-ghost-button,
+:root[data-theme="dark"] .clay-accent-panel .clay-hero-ghost-button {
+  border-color: rgba(255, 255, 255, 0.20) !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.07)) !important;
+  color: #ffffff !important;
+  box-shadow:
+    6px 8px 16px rgba(0, 0, 0, 0.20),
+    inset 1px 1px 1px rgba(255, 255, 255, 0.16);
+}
+
+.clay-accent-panel .clay-accent-stat {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.075)) !important;
+  color: #ffffff !important;
+  box-shadow:
+    7px 9px 18px rgba(0, 0, 0, 0.19),
+    inset 1px 1px 1px rgba(255, 255, 255, 0.15);
+}
+
 @media (hover: hover) {
   .panel:hover,
   .metric-card:hover {
