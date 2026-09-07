@@ -177,6 +177,18 @@ function assertCredentialsAreBlank() {
   }
 }
 
+function assertLandingResourcesStayOnTheLandingPage() {
+  const resourcesLink = [...document.querySelectorAll("a")].find((item) =>
+    item.textContent.replace(/\s+/g, " ").trim() === "Resources" &&
+    item.getAttribute("href") === "#resources");
+  if (!resourcesLink) {
+    throw new Error("Landing header Resources link does not target the landing Resources section.");
+  }
+  if (!document.getElementById("resources")) {
+    throw new Error("Landing Resources section is missing.");
+  }
+}
+
 async function registerThenVerify() {
   await new Promise((resolve) => setTimeout(resolve, 40));
   const registrationForm = document.querySelector("form");
@@ -202,6 +214,7 @@ async function registerThenVerify() {
 }
 
 if (scenario === "public") {
+  assertLandingResourcesStayOnTheLandingPage();
   await clickAndAssert("/login/student", "/login/student", "Welcome back.");
   assertCredentialsAreBlank();
   await clickAndAssert("/login/admin", "/login/admin", "Admin access.");

@@ -109,13 +109,42 @@ export default function LandingPage() {
               <div className="landing-orbit-decoration" aria-hidden="true" />
               <div className="landing-peer-card"><span className="landing-peer-avatar"><Users size={24} /></span><span><strong>A shared ambition.<br />A new connection.</strong><small>Find your people on CareerCube</small></span><span className="landing-peer-check"><Check size={16} /></span></div>
               <div className="landing-conversation"><span className="landing-conversation-label"><MessageCircle size={15} /> GOOD CONVERSATIONS START HERE</span><p className="landing-conversation-prompt">What are you<br /><em>working towards?</em></p><div><span>Connect. Share. Grow.</span><CheckCheck size={19} /></div></div>
-              <Link to="/resources" className="landing-resource-note"><span className="landing-resource-note-icon"><BookOpen size={19} /></span><span><strong>A little inspiration goes a long way.</strong><small>Explore learning resources &amp; events</small></span><ArrowUpRight size={20} /></Link>
+              <a href="#resources" className="landing-resource-note"><span className="landing-resource-note-icon"><BookOpen size={19} /></span><span><strong>A little inspiration goes a long way.</strong><small>Explore learning resources &amp; events</small></span><ArrowUpRight size={20} /></a>
+            </div>
+          </div>
+        </section>
+
+        <section id="resources" className="landing-resources-section" aria-labelledby="resources-title">
+          <div className="landing-container landing-section">
+            <div className="landing-section-heading">
+              <div><SectionLabel number="04">KEEP MOVING, WITH CLARITY</SectionLabel><h2 id="resources-title">Resources for the<br /><em>road ahead.</em></h2></div>
+              <p>Useful guides, learning paths and campus opportunitiesâ€”all collected in one calm place.</p>
+            </div>
+            <div className="landing-resources-grid">
+              <article className="landing-resource-card landing-resource-card-blue">
+                <span className="landing-resource-card-icon"><BookOpen size={21} /></span>
+                <p className="landing-resource-card-kicker">LEARNING LIBRARY</p>
+                <h3>Build the skills<br />your next role needs.</h3>
+                <p>Explore focused resources that make each next learning step easier to choose.</p>
+              </article>
+              <article className="landing-resource-card landing-resource-card-sage">
+                <span className="landing-resource-card-icon"><FileText size={21} /></span>
+                <p className="landing-resource-card-kicker">CAREER GUIDES</p>
+                <h3>Turn questions into<br />a practical plan.</h3>
+                <p>Save useful career guidance, then return to it whenever you are ready.</p>
+              </article>
+              <div className="landing-resource-library-card">
+                <span>ONE PLACE. EVERY NEXT STEP.</span>
+                <h3>Ready when<br />you are.</h3>
+                <p>See the full collection of learning resources and events.</p>
+                <Link to="/resources" className="landing-button landing-button-primary">Open resource library <ArrowUpRight size={17} /></Link>
+              </div>
             </div>
           </div>
         </section>
 
         <section className="landing-faq landing-container landing-section" aria-labelledby="faq-title">
-          <div><SectionLabel number="04">A FEW THINGS TO KNOW</SectionLabel><h2 id="faq-title">Good questions.<br /><em>Clear answers.</em></h2><p>Getting started should feel simple.</p></div>
+          <div><SectionLabel number="05">A FEW THINGS TO KNOW</SectionLabel><h2 id="faq-title">Good questions.<br /><em>Clear answers.</em></h2><p>Getting started should feel simple.</p></div>
           <div className="landing-faq-list">{questions.map(([question, answer], index) => <details key={question}><summary><span className="landing-faq-number">0{index + 1}</span><span>{question}</span><Plus size={19} /></summary><p>{answer}</p></details>)}</div>
         </section>
 

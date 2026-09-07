@@ -15,7 +15,7 @@ const editorialNavigation = [
   { label: "Platform", href: "#platform", kind: "anchor" },
   { label: "How it works", href: "#journey", kind: "anchor" },
   { label: "Community", href: "#community", kind: "anchor" },
-  { label: "Resources", href: "/resources", id: "resources" },
+  { label: "Resources", href: "#resources", kind: "anchor" },
 ];
 
 function EditorialNavLink({ item, current, onNavigate }) {
@@ -186,7 +186,7 @@ export function PublicFooter({ variant = "default" }) {
               <a href="#platform">The platform</a>
               <a href="#journey">How it works</a>
               <Link to="/community">Your community</Link>
-              <Link to="/resources">Learning resources</Link>
+              <a href="#resources">Learning resources</a>
             </div>
             <div className="landing-footer-link-group">
               <h2 className="landing-footer-label">Your next chapter</h2>
