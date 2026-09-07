@@ -2843,3 +2843,48 @@ body {
     display: none;
   }
 }
+
+/* Applicant CV preview uses one contained scroll area. This prevents the
+   dashboard and the modal from scrolling at the same time on long resumes. */
+html.applicant-cv-modal-open,
+html.applicant-cv-modal-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.applicant-cv-backdrop {
+  z-index: 100;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
+.applicant-cv-modal {
+  display: flex;
+  flex-direction: column;
+  height: min(94dvh, calc(100dvh - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: 0;
+}
+
+.applicant-cv-header {
+  position: relative;
+  z-index: 1;
+}
+
+.applicant-cv-scroll {
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 640px) {
+  .applicant-cv-backdrop {
+    padding: 0.5rem;
+  }
+
+  .applicant-cv-modal {
+    height: calc(100dvh - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+}

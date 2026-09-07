@@ -73,6 +73,11 @@ function ApplicantModal({ application, onClose, onStatusChanged, notify }) {
       .finally(() => setLoading(false));
   }, [application.id]);
 
+  useEffect(() => {
+    document.documentElement.classList.add("applicant-cv-modal-open");
+    return () => document.documentElement.classList.remove("applicant-cv-modal-open");
+  }, []);
+
   const changeStatus = async (status) => {
     setStatusSaving(true);
     try {
@@ -102,9 +107,9 @@ function ApplicantModal({ application, onClose, onStatusChanged, notify }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card max-h-[94vh] max-w-6xl overflow-y-auto" onClick={(event) => event.stopPropagation()}>
-        <div className="sticky top-0 z-20 -mx-1 -mt-1 flex flex-wrap items-start justify-between gap-4 border-b border-ink/[0.08] bg-canvas/95 px-1 pb-4 pt-1 backdrop-blur dark:bg-[#111216]/95">
+    <div className="modal-backdrop applicant-cv-backdrop" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label="Applicant CV preview" className="modal-card applicant-cv-modal max-w-6xl overflow-hidden" onClick={(event) => event.stopPropagation()}>
+        <div className="applicant-cv-header shrink-0 flex flex-wrap items-start justify-between gap-4 border-b border-ink/[0.08] pb-4">
           <div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-cobalt text-xs font-extrabold text-white">{initials(application.applicant_name)}</span><div><span className="eyebrow">Application #{application.id}</span><h2 className="mt-1 text-xl font-extrabold">{application.applicant_name}</h2><p className="text-xs text-muted">{application.job_title} · {application.company_name}</p></div></div>
           <div className="flex items-center gap-2">
             {detail?.has_resume_file && <button onClick={openUploadedResume} className="btn-secondary"><Download size={15} /> Open uploaded CV</button>}
@@ -112,6 +117,7 @@ function ApplicantModal({ application, onClose, onStatusChanged, notify }) {
           </div>
         </div>
 
+        <div className="applicant-cv-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         {loading && <div className="grid min-h-80 place-items-center text-center text-xs text-muted"><span><LoaderCircle className="mx-auto mb-3 animate-spin text-plum" size={25} />Loading applicant and CV...</span></div>}
         {!loading && error && <div className="my-8 rounded-2xl bg-coral/10 p-5 text-sm font-bold text-coral"><AlertTriangle className="mr-2 inline" size={17} />{error}</div>}
         {!loading && detail && (
@@ -157,6 +163,7 @@ function ApplicantModal({ application, onClose, onStatusChanged, notify }) {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );
