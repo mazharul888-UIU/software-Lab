@@ -1,17 +1,4 @@
-import { useEffect, useState } from "react";
-import { Link, useLocation } from "../lib/router";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Eye,
-  EyeOff,
-  GraduationCap,
-  LockKeyhole,
-  Mail,
-  ShieldCheck,
-  User,
-} from "lucide-react";
+from "lucide-react";
 import Brand from "./Brand";
 import ThemeToggle from "./ThemeToggle";
 import AuthVisual from "./AuthVisual";
