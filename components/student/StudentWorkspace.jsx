@@ -70,6 +70,21 @@ import { socialProfileApiValue, socialProfileDisplay, socialProfileError, social
 
 
 
+const navItems = [
+  { id: "overview", label: "Overview", icon: Gauge, group: "Workspace" },
+  { id: "jobs", label: "Available jobs", icon: BriefcaseBusiness },
+  { id: "applications", label: "My applications", icon: FileCheck2 },
+  { id: "vault", label: "Career Vault", icon: FileText },
+  { id: "assessments", label: "Skill assessments", icon: ListChecks, group: "Growth" },
+  { id: "analytics", label: "Performance", icon: BarChart3 },
+  { id: "learning", label: "Learning resources", icon: BookOpen },
+  { id: "community", label: "Community", icon: Users, badge: "New", group: "Connect" },
+  { id: "connections", label: "Connections & inbox", icon: MessageCircle },
+  { id: "events", label: "Events", icon: CalendarDays },
+  { id: "achievements", label: "Achievements", icon: Trophy },
+  { id: "profile", label: "Profile & settings", icon: Settings, group: "Account" },
+];
+
 const pageMeta = {
   overview: ["Overview", "Here’s what is moving your career forward today."],
   jobs: ["Available jobs", "Real, unexpired opportunities published by CareerCube administrators."],
