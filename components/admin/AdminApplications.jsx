@@ -104,11 +104,11 @@ function ApplicantModal({ application, onClose, onStatusChanged, notify }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card max-h-[94vh] max-w-6xl overflow-y-auto" onClick={(event) => event.stopPropagation()}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="sticky top-0 z-20 -mx-1 -mt-1 flex flex-wrap items-start justify-between gap-4 border-b border-ink/[0.08] bg-canvas/95 px-1 pb-4 pt-1 backdrop-blur dark:bg-[#111216]/95">
           <div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-cobalt text-xs font-extrabold text-white">{initials(application.applicant_name)}</span><div><span className="eyebrow">Application #{application.id}</span><h2 className="mt-1 text-xl font-extrabold">{application.applicant_name}</h2><p className="text-xs text-muted">{application.job_title} · {application.company_name}</p></div></div>
           <div className="flex items-center gap-2">
             {detail?.has_resume_file && <button onClick={openUploadedResume} className="btn-secondary"><Download size={15} /> Open uploaded CV</button>}
-            <button onClick={onClose} className="btn-ghost"><X size={18} /></button>
+            <button type="button" onClick={onClose} className="btn-secondary min-h-10" aria-label="Close applicant CV and return to applications" title="Back to applications"><X size={18} /> <span>Back to applications</span></button>
           </div>
         </div>
 
