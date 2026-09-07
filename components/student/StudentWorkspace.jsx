@@ -44,6 +44,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  Save,
   Settings,
   Share2,
   ShieldCheck,
@@ -213,26 +214,34 @@ const getCvStorageKey = (user) => {
   return `careerforge_cv_${owner}`;
 };
 
-function readCvData(user) {
+function normalizeCvData(saved, user) {
   const empty = createCvData(user);
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) return empty;
+  return {
+    ...empty,
+    ...saved,
+    name: saved.name || empty.name,
+    email: saved.email || empty.email,
+    education: Array.isArray(saved.education) ? saved.education : [],
+    languages: Array.isArray(saved.languages) ? saved.languages : [],
+    experiences: Array.isArray(saved.experiences) ? saved.experiences : [],
+    projects: Array.isArray(saved.projects) ? saved.projects : [],
+    certifications: Array.isArray(saved.certifications) ? saved.certifications : [],
+  };
+}
+
+function readCvData(user) {
   try {
-    const saved = JSON.parse(localStorage.getItem(getCvStorageKey(user)));
-    if (!saved || typeof saved !== "object") return empty;
-    return {
-      ...empty,
-      ...saved,
-      name: saved.name || empty.name,
-      email: saved.email || empty.email,
-      education: Array.isArray(saved.education) ? saved.education : [],
-      languages: Array.isArray(saved.languages) ? saved.languages : [],
-      experiences: Array.isArray(saved.experiences) ? saved.experiences : [],
-      projects: Array.isArray(saved.projects) ? saved.projects : [],
-      certifications: Array.isArray(saved.certifications) ? saved.certifications : [],
-    };
+    return normalizeCvData(JSON.parse(localStorage.getItem(getCvStorageKey(user))), user);
   } catch {
-    return empty;
+    return createCvData(user);
   }
 }
+
+const cvSnapshot = (data, photo) => JSON.stringify({
+  data,
+  photo: photo?.src ? { src: photo.src, name: photo.name || "CV photo" } : null,
+});
 
 const createItemId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -322,6 +331,12 @@ export default function StudentWorkspace() {
   });
   const [cvPhoto, setCvPhoto] = useState(null);
   const [cvData, setCvData] = useState(() => readCvData(readStudentUser()));
+  const [cvSaving, setCvSaving] = useState(false);
+  const [cvSaveError, setCvSaveError] = useState("");
+  const [cvSavedSnapshot, setCvSavedSnapshot] = useState(null);
+  const [cvLoaded, setCvLoaded] = useState(false);
+  const currentCvSnapshot = useMemo(() => cvSnapshot(cvData, cvPhoto), [cvData, cvPhoto]);
+  const cvDirty = currentCvSnapshot !== cvSavedSnapshot;
 
   useEffect(() => {
     localStorage.setItem(getCvStorageKey(currentUser), JSON.stringify(cvData));
@@ -343,6 +358,35 @@ export default function StudentWorkspace() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.id) return undefined;
+    let cancelled = false;
+    const loadSavedCareerVault = async () => {
+      try {
+        const result = await apiRequest("/resume");
+        if (cancelled) return;
+        if (result.saved) {
+          const nextData = normalizeCvData(result.resume, currentUser);
+          const nextPhoto = result.photo?.src ? result.photo : null;
+          setCvData(nextData);
+          setCvPhoto(nextPhoto);
+          setCvSavedSnapshot(cvSnapshot(nextData, nextPhoto));
+        }
+        setCvSaveError("");
+      } catch {
+        if (!cancelled) {
+          setCvSaveError("Could not load your saved CV. Your local draft is still available.");
+        }
+      } finally {
+        if (!cancelled) setCvLoaded(true);
+      }
+    };
+    loadSavedCareerVault();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -598,6 +642,34 @@ export default function StudentWorkspace() {
     }
   };
 
+  const saveCareerVault = async () => {
+    if (!currentUser?.id) {
+      notify("Your account is still loading. Please try saving again in a moment.");
+      return;
+    }
+    setCvSaving(true);
+    setCvSaveError("");
+    try {
+      const result = await apiRequest("/resume", {
+        method: "PATCH",
+        body: JSON.stringify({ resume: cvData, photo: cvPhoto }),
+      });
+      const nextData = normalizeCvData(result.resume, currentUser);
+      const nextPhoto = result.photo?.src ? result.photo : null;
+      setCvData(nextData);
+      setCvPhoto(nextPhoto);
+      setCvSavedSnapshot(cvSnapshot(nextData, nextPhoto));
+      setCvLoaded(true);
+      localStorage.setItem(getCvStorageKey(currentUser), JSON.stringify(nextData));
+      notify("CV saved to your CareerCube account.");
+    } catch (error) {
+      setCvSaveError(error.message);
+      notify(error.message);
+    } finally {
+      setCvSaving(false);
+    }
+  };
+
   const startAdaptiveAssessment = async () => {
     if (!adaptiveAssessment?.profileReady) {
       setActive("profile");
@@ -753,7 +825,10 @@ export default function StudentWorkspace() {
       <button className="btn-secondary"><BellRing size={16} /> Create job alert</button>
     ),
     vault: (
-      <button onClick={() => window.print()} className="btn-accent"><Download size={16} /> Export PDF</button>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" onClick={saveCareerVault} disabled={cvSaving} className="btn-accent disabled:cursor-wait disabled:opacity-70"><Save size={16} /> {cvSaving ? "Saving..." : "Save CV"}</button>
+        <button type="button" onClick={() => window.print()} className="btn-secondary"><Download size={16} /> Export PDF</button>
+      </div>
     ),
     community: (
       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -821,7 +896,7 @@ export default function StudentWorkspace() {
           />
         )}
         {active === "applications" && <ApplicationsPage applications={applications} loading={jobsLoading} error={jobsError} onRetry={loadJobData} onWithdraw={withdrawJobApplication} />}
-        {active === "vault" && <CareerVault notify={notify} photo={cvPhoto} setPhoto={setCvPhoto} data={cvData} setData={setCvData} />}
+        {active === "vault" && <CareerVault notify={notify} photo={cvPhoto} setPhoto={setCvPhoto} data={cvData} setData={setCvData} onSave={saveCareerVault} saving={cvSaving} dirty={cvDirty} saved={cvLoaded && !cvDirty} error={cvSaveError} />}
         {active === "assessments" && (
           <AssessmentsPage
             assessments={assessmentRecords}
@@ -1190,7 +1265,7 @@ function Status({ value }) {
   return <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${styles[value] || "bg-ink/10 text-muted"}`}>{value}</span>;
 }
 
-function CareerVault({ notify, photo, setPhoto, data, setData }) {
+function CareerVault({ notify, photo, setPhoto, data, setData, onSave, saving, dirty, saved, error }) {
   const [photoError, setPhotoError] = useState("");
   const update = (key, value) => setData((current) => ({ ...current, [key]: value }));
   const initials = getInitials(data.name) || "CV";
@@ -1218,28 +1293,19 @@ function CareerVault({ notify, photo, setPhoto, data, setData }) {
     }));
   };
 
-  const uploadPhoto = (event) => {
+  const uploadPhoto = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setPhotoError("Please choose a JPG, PNG or WebP image.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setPhotoError("Photo must be smaller than 5 MB.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhoto({ src: String(reader.result), name: file.name });
+    try {
+      const src = await prepareProfilePhoto(file);
+      setPhoto({ src, name: file.name });
       setPhotoError("");
-      notify("CV photo added. Your preview has been updated.");
-    };
-    reader.onerror = () => setPhotoError("The photo could not be read. Please try another image.");
-    reader.readAsDataURL(file);
+      notify("CV photo added. Save CV to keep it in your account.");
+    } catch (uploadError) {
+      setPhotoError(uploadError.message);
+    }
   };
 
   const removePhoto = () => {
@@ -1251,7 +1317,17 @@ function CareerVault({ notify, photo, setPhoto, data, setData }) {
   return (
     <div className="grid gap-5 xl:grid-cols-[.75fr_1.25fr]">
       <section className="panel h-fit p-5">
-        <div className="mb-5 flex items-center justify-between"><div><h2 className="text-lg font-extrabold">Resume details</h2><p className="text-xs text-muted">Every section is manually editable and updates the preview instantly.</p></div><span className="tag text-jade"><Check size={12} /> Saved</span></div>
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div><h2 className="text-lg font-extrabold">Resume details</h2><p className="text-xs text-muted">Every section is manually editable and updates the preview instantly.</p></div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className={`tag ${saving ? "text-cobalt" : dirty ? "text-coral" : saved ? "text-jade" : "text-muted"}`}>
+              {saving ? <RefreshCw className="animate-spin" size={12} /> : dirty ? <Clock3 size={12} /> : <Check size={12} />}
+              {saving ? "Saving" : dirty ? "Unsaved changes" : saved ? "Saved to account" : "Save your CV"}
+            </span>
+            <button type="button" onClick={onSave} disabled={saving} className="btn-accent min-h-9 px-3 text-xs disabled:cursor-wait disabled:opacity-70"><Save size={14} /> {saving ? "Saving..." : "Save CV"}</button>
+          </div>
+        </div>
+        {error && <p className="mb-4 rounded-xl bg-coral/10 px-3 py-2 text-[11px] font-bold text-coral">{error}</p>}
         <div className="space-y-5">
           <div className="rounded-[22px] border border-ink/[0.08] bg-white/45 p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -1268,7 +1344,7 @@ function CareerVault({ notify, photo, setPhoto, data, setData }) {
               <div className="min-w-0 flex-1">
                 <b className="block text-sm">Professional photo</b>
                 <p className="mt-1 text-[11px] leading-5 text-muted">
-                  Use a clear headshot. JPG, PNG or WebP · maximum 5 MB.
+                  Use a clear headshot. JPG, PNG or WebP · up to 8 MB, optimized before saving.
                 </p>
                 {photo?.name && <p className="mt-1 truncate text-[10px] font-bold text-jade">{photo.name}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
