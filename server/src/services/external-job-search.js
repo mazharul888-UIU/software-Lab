@@ -131,6 +131,11 @@ function cacheMinutes() {
   return Math.max(60, Math.min(1440, Number.isFinite(configured) ? configured : 720));
 }
 
+function errorRetryMinutes() {
+  const configured = Number(process.env.JSEARCH_ERROR_RETRY_MINUTES || 5);
+  return Math.max(1, Math.min(60, Number.isFinite(configured) ? configured : 5));
+}
+
 function cacheCutoff() {
   return new Date(Date.now() - (cacheMinutes() * 60 * 1000));
 }
@@ -198,9 +203,16 @@ async function readSyncState() {
   return state || null;
 }
 
-function isRecent(value) {
+function isRecent(value, minutes = cacheMinutes()) {
   const time = new Date(value || 0).getTime();
-  return Number.isFinite(time) && time >= cacheCutoff().getTime();
+  return Number.isFinite(time) && time >= Date.now() - (minutes * 60 * 1000);
+}
+
+function statusForError(errorCode) {
+  if (errorCode === "http_401" || errorCode === "http_403") return "subscription_required";
+  if (errorCode === "rate_limited") return "rate_limited";
+  if (errorCode === "no_results") return "no_results";
+  return "unavailable";
 }
 
 async function saveSyncState({ success, errorCode = null }) {
@@ -272,32 +284,41 @@ function toRecommendationJob(row) {
 async function getBangladeshExternalJobs() {
   await ensureExternalJobSchema();
   if (!jSearchConfigured()) {
-    return { items: [], configured: false, status: "disabled", syncedAt: null };
+    return { items: [], configured: false, status: "disabled", errorCode: null, syncedAt: null };
   }
 
   const [state, freshRows] = await Promise.all([readSyncState(), readListings({ freshOnly: true })]);
-  if (isRecent(state?.last_attempt_at)) {
+  const retryAfterMinutes = state?.last_error_code ? errorRetryMinutes() : cacheMinutes();
+  if (isRecent(state?.last_attempt_at, retryAfterMinutes)) {
     return {
       items: freshRows.map(toRecommendationJob),
       configured: true,
-      status: state?.last_error_code ? "cached" : "ready",
+      status: state?.last_error_code ? statusForError(state.last_error_code) : "ready",
+      errorCode: state?.last_error_code || null,
       syncedAt: state?.last_success_at || null,
     };
   }
 
   try {
     const listings = await fetchJSearchListings();
+    if (!listings.length) {
+      await saveSyncState({ success: false, errorCode: "no_results" });
+      return { items: freshRows.map(toRecommendationJob), configured: true, status: "no_results", errorCode: "no_results", syncedAt: state?.last_success_at || null };
+    }
     await persistListings(listings);
     await saveSyncState({ success: true });
     const rows = await readListings({ freshOnly: true });
-    return { items: rows.map(toRecommendationJob), configured: true, status: "ready", syncedAt: new Date().toISOString() };
+    return { items: rows.map(toRecommendationJob), configured: true, status: "ready", errorCode: null, syncedAt: new Date().toISOString() };
   } catch (error) {
-    await saveSyncState({ success: false, errorCode: String(error?.code || "unavailable").slice(0, 120) });
+    const errorCode = String(error?.code || "unavailable").slice(0, 120);
+    console.warn("JSearch Bangladesh sync did not complete", { errorCode });
+    await saveSyncState({ success: false, errorCode });
     const fallback = freshRows.length ? freshRows : await readListings();
     return {
       items: fallback.map(toRecommendationJob),
       configured: true,
-      status: "cached",
+      status: statusForError(errorCode),
+      errorCode,
       syncedAt: state?.last_success_at || null,
     };
   }

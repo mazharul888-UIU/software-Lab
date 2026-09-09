@@ -1,4 +1,6 @@
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const { join } = require("node:path");
 const {
   SOURCE,
   SOURCE_LABEL,
@@ -27,5 +29,10 @@ assert.equal(listing.employmentType, "Full-time");
 assert.match(listing.requirements, /React/);
 assert.equal(listing.applicationUrl, "https://example.com/jobs/42");
 assert.equal(normalizeJSearchJob({ job_title: "No application URL" }), null);
+
+const service = readFileSync(join(__dirname, "..", "server", "src", "services", "external-job-search.js"), "utf8");
+assert.match(service, /JSEARCH_ERROR_RETRY_MINUTES/);
+assert.match(service, /subscription_required/);
+assert.match(service, /JSearch Bangladesh sync did not complete/);
 
 console.log("External JSearch job normalization smoke test passed.");

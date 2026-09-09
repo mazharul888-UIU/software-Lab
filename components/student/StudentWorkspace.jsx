@@ -303,7 +303,7 @@ export default function StudentWorkspace() {
     aiConfigured: false,
     aiExplained: 0,
     verifiedSourceJobs: 0,
-    externalSource: { configured: false, status: "disabled", jobCount: 0 },
+    externalSource: { configured: false, status: "disabled", errorCode: null, jobCount: 0 },
   });
   const [savedJobs, setSavedJobs] = useState([]);
   const [events, setEvents] = useState([]);
@@ -504,7 +504,7 @@ export default function StudentWorkspace() {
           aiConfigured: Boolean(recommendations.aiConfigured),
           aiExplained: Number(recommendations.aiExplained || 0),
           verifiedSourceJobs: Number(recommendations.verifiedSourceJobs || 0),
-          externalSource: recommendations.externalSource || { configured: false, status: "disabled", jobCount: 0 },
+          externalSource: recommendations.externalSource || { configured: false, status: "disabled", errorCode: null, jobCount: 0 },
         });
       }
       setApplications(nextApplications.map(normalizeApplication));
@@ -1165,6 +1165,20 @@ function JobsPage({ jobs: availableJobs, recommendations, loading, error, onRetr
         <section className="rounded-[22px] border border-cobalt/20 bg-cobalt/5 p-4 text-sm">
           <b className="block">Add your skills for accurate AI job matching</b>
           <p className="mt-1 text-xs text-muted">Complete: {recommendations.missingFields.join(", ") || "your career profile"}. Update Profile & settings, then refresh this page.</p>
+        </section>
+      )}
+      {!loading && recommendations.externalSource?.configured && recommendations.externalSource.jobCount === 0 && recommendations.externalSource.status !== "ready" && (
+        <section className="rounded-[22px] border border-coral/20 bg-coral/5 p-4 text-sm">
+          <b className="block">JSearch live jobs are not connected yet</b>
+          <p className="mt-1 text-xs leading-5 text-muted">
+            {recommendations.externalSource.status === "subscription_required"
+              ? "Activate the JSearch Free or Basic plan in RapidAPI, then press Refresh."
+              : recommendations.externalSource.status === "rate_limited"
+                ? "The JSearch quota is temporarily full. CareerCube will try again automatically in a few minutes."
+                : recommendations.externalSource.status === "no_results"
+                  ? "JSearch did not return Bangladesh listings right now. CareerCube will try again in a few minutes."
+                  : "CareerCube could not refresh JSearch right now. Press Refresh in a few minutes."}
+          </p>
         </section>
       )}
       {loading && <section className="panel grid min-h-64 place-items-center text-center"><div><RefreshCw className="mx-auto animate-spin text-cobalt" size={28} /><p className="mt-3 text-xs font-bold text-muted">Loading live jobs...</p></div></section>}

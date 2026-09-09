@@ -206,6 +206,7 @@ router.get("/recommendations", authenticate, async (req, res, next) => {
         provider: "JSearch",
         configured: externalFeed.configured,
         status: externalFeed.status,
+        errorCode: externalFeed.errorCode,
         syncedAt: externalFeed.syncedAt,
         jobCount: externalFeed.items.length,
       },
