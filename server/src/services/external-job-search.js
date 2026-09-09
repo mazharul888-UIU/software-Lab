@@ -147,9 +147,12 @@ async function fetchJSearchListings() {
     query: String(process.env.JSEARCH_QUERY || "jobs in Bangladesh").trim().slice(0, 180),
     page: "1",
     num_pages: "1",
+    country: String(process.env.JSEARCH_COUNTRY || "bd").trim().slice(0, 8),
     date_posted: "all",
   });
-  const response = await fetch(`https://jsearch.p.rapidapi.com/search?${params}`, {
+  // The original /search route was retired by JSearch. RapidAPI's current
+  // JSearch route is /search-v2 and wraps the job array in data.jobs.
+  const response = await fetch(`https://jsearch.p.rapidapi.com/search-v2?${params}`, {
     headers: {
       "X-RapidAPI-Key": key,
       "X-RapidAPI-Host": "jsearch.p.rapidapi.com",
@@ -162,7 +165,11 @@ async function fetchJSearchListings() {
     throw error;
   }
   const payload = await response.json();
-  const incoming = Array.isArray(payload?.data) ? payload.data : [];
+  const incoming = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload?.data?.jobs)
+      ? payload.data.jobs
+      : [];
   const seen = new Set();
   return incoming
     .map(normalizeJSearchJob)

@@ -34,5 +34,7 @@ const service = readFileSync(join(__dirname, "..", "server", "src", "services", 
 assert.match(service, /JSEARCH_ERROR_RETRY_MINUTES/);
 assert.match(service, /subscription_required/);
 assert.match(service, /JSearch Bangladesh sync did not complete/);
+assert.match(service, /search-v2/);
+assert.match(service, /payload\?\.data\?\.jobs/);
 
 console.log("External JSearch job normalization smoke test passed.");
