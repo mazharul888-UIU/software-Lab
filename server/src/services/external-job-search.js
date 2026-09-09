@@ -289,7 +289,10 @@ async function getBangladeshExternalJobs() {
 
   const [state, freshRows] = await Promise.all([readSyncState(), readListings({ freshOnly: true })]);
   const retryAfterMinutes = state?.last_error_code ? errorRetryMinutes() : cacheMinutes();
-  if (isRecent(state?.last_attempt_at, retryAfterMinutes)) {
+  // A prior empty response must never keep the feed in a false "ready" state
+  // for the normal cache window. Retry immediately so a new API key or an
+  // upstream data recovery becomes visible without waiting up to 12 hours.
+  if (freshRows.length > 0 && isRecent(state?.last_attempt_at, retryAfterMinutes)) {
     return {
       items: freshRows.map(toRecommendationJob),
       configured: true,
