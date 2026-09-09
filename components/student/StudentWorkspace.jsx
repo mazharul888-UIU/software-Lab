@@ -88,7 +88,7 @@ const navItems = [
 
 const pageMeta = {
   overview: ["Overview", "Here’s what is moving your career forward today."],
-  jobs: ["Available jobs", "Real, unexpired opportunities published by CareerCube administrators."],
+  jobs: ["Available jobs", "Live CareerCube and external opportunities, ranked for your career profile."],
   applications: ["Application tracker", "Stay on top of every opportunity and follow-up."],
   vault: ["Career Vault", "Build, refine and export your professional story."],
   assessments: ["Skill assessments", "Measure what you know and make the next learning step obvious."],
@@ -303,6 +303,7 @@ export default function StudentWorkspace() {
     aiConfigured: false,
     aiExplained: 0,
     verifiedSourceJobs: 0,
+    externalSource: { configured: false, status: "disabled", jobCount: 0 },
   });
   const [savedJobs, setSavedJobs] = useState([]);
   const [events, setEvents] = useState([]);
@@ -503,6 +504,7 @@ export default function StudentWorkspace() {
           aiConfigured: Boolean(recommendations.aiConfigured),
           aiExplained: Number(recommendations.aiExplained || 0),
           verifiedSourceJobs: Number(recommendations.verifiedSourceJobs || 0),
+          externalSource: recommendations.externalSource || { configured: false, status: "disabled", jobCount: 0 },
         });
       }
       setApplications(nextApplications.map(normalizeApplication));
@@ -1155,8 +1157,8 @@ function JobsPage({ jobs: availableJobs, recommendations, loading, error, onRetr
       </section>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-extrabold">{recommendations.matchingEnabled ? "Personalized opportunities" : "Administrator-published opportunities"}</h2>
-          <p className="mt-1 text-sm text-muted"><b className="text-ink">{filtered.length} available jobs</b> · CareerCube roles and verified external source listings</p>
+          <h2 className="text-lg font-extrabold">{recommendations.matchingEnabled ? "Personalized opportunities" : "Available opportunities"}</h2>
+          <p className="mt-1 text-sm text-muted"><b className="text-ink">{filtered.length} available jobs</b> · CareerCube roles and external listings{recommendations.externalSource?.configured ? ` · ${recommendations.externalSource.jobCount || 0} from JSearch` : ""}</p>
         </div>
       </div>
       {!loading && recommendations.matchingEnabled && !recommendations.profileReady && (

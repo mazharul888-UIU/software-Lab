@@ -21,6 +21,7 @@
     "test:student-overview": "node scripts/student-overview-smoke.cjs",
     "test:job-matching": "node scripts/job-matching-smoke.cjs",
     "test:verified-source-jobs": "node scripts/verified-source-jobs-smoke.cjs",
+    "test:external-jobs": "node scripts/external-jobs-smoke.cjs",
     "test:events": "node scripts/events-smoke.cjs",
     "test:community-posts": "node scripts/community-posts-smoke.cjs",
     "test:student-network": "node scripts/student-network-smoke.cjs",

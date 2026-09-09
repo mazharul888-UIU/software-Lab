@@ -4,6 +4,7 @@ const { authenticate } = require("../middleware/auth");
 const { ensureJobSchema } = require("../services/job-schema");
 const { ensureMatchingSchema } = require("../services/matching-schema");
 const { getPlatformSettings } = require("../services/platform-settings");
+const { getBangladeshExternalJobs } = require("../services/external-job-search");
 const {
   profileForMatching,
   missingProfileFields,
@@ -143,13 +144,18 @@ router.get("/recommendations", authenticate, async (req, res, next) => {
        ORDER BY j.created_at DESC LIMIT 100`,
       [req.user.id],
     );
+    const externalFeed = await getBangladeshExternalJobs();
     const matchProfile = profileForMatching(profile || {}, skills);
     const missingFields = missingProfileFields(matchProfile);
     const matchingEnabled = Boolean(settings.ai.jobRecommendationsEnabled);
-    const matchingJobs = jobs.map((job) => ({
-      ...job,
-      source_name: job.application_mode === "external" ? job.source_label || "Verified company source" : "CareerCube",
-    }));
+    const matchingJobs = [
+      ...jobs.map((job) => ({
+        ...job,
+        external_source: false,
+        source_name: job.application_mode === "external" ? job.source_label || "Verified company source" : "CareerCube",
+      })),
+      ...externalFeed.items,
+    ];
     let matches = matchingEnabled
       ? matchingJobs.map((job) => buildLocalMatch(matchProfile, job))
       : matchingJobs.map((job) => ({ ...job, match_percentage: null, reasons: [], skill_gaps: [], matched_skills: [] }));
@@ -162,7 +168,10 @@ router.get("/recommendations", authenticate, async (req, res, next) => {
 
     let aiExplained = 0;
     if (matchingEnabled && missingFields.length === 0 && geminiMatchingConfigured() && matches.length) {
-      const topMatches = matches.slice(0, 8);
+      // External provider IDs are strings and are not persisted in job_match_insights.
+      // They still receive the deterministic profile match above; Gemini explanations
+      // remain scoped to jobs stored in CareerCube's database.
+      const topMatches = matches.filter((job) => !job.external_source).slice(0, 8);
       const fingerprint = profileSignature(matchProfile);
       const cachedInsights = await fetchCachedInsights(req.user.id, fingerprint, topMatches);
       const uncached = topMatches.filter((job) => !cachedInsights.has(Number(job.id)));
@@ -193,6 +202,13 @@ router.get("/recommendations", authenticate, async (req, res, next) => {
       aiConfigured: geminiMatchingConfigured(),
       aiExplained,
       verifiedSourceJobs: matchingJobs.filter((job) => job.application_mode === "external").length,
+      externalSource: {
+        provider: "JSearch",
+        configured: externalFeed.configured,
+        status: externalFeed.status,
+        syncedAt: externalFeed.syncedAt,
+        jobCount: externalFeed.items.length,
+      },
       generatedAt: new Date().toISOString(),
     });
   } catch (error) { next(error); }
