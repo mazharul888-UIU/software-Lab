@@ -12,6 +12,8 @@ assert.match(schema, /UNIQUE KEY uq_student_connection_pair/, "A pair of student
 assert.match(schema, /CREATE TABLE IF NOT EXISTS student_messages/, "Private messages need a database table");
 assert.match(schema, /connection_key VARCHAR\(64\)/, "Messages need a stable connection-pair key for legacy schemas");
 assert.match(route, /router\.get\("\/students"/, "Students must be searchable");
+assert.match(route, /const like = `%\$\{term\.toLowerCase\(\)\}%`/, "Student search terms must be normalized before matching");
+assert.match(route, /LOWER\(u\.name\) LIKE \?/, "Student name search must be case-insensitive regardless of database collation");
 assert.match(route, /router\.post\("\/connections"/, "Students must be able to send connection requests");
 assert.match(route, /status='accepted'/, "Messages must be gated by an accepted connection");
 assert.match(route, /router\.post\("\/conversations\/:connectionId\/messages"/, "Connected students must be able to send messages");
@@ -21,12 +23,15 @@ assert.match(route, /sender_id=\?/, "A student must not delete another student's
 assert.match(route, /recipient_id=\? AND read_at IS NULL/, "Unread messages must be tracked per recipient");
 assert.match(route, /connectionKeyFor/, "Connection APIs must work without relying on a legacy surrogate ID");
 assert.match(route, /connection_record_id/, "Messages must use the connection record required by the database foreign key");
+assert.match(route, /function connectedSkillFields/, "Accepted connections must include a compact skills projection");
+assert.match(route, /GROUP_CONCAT\(s\.name/, "Connection profiles must return the connected student's skills");
 assert.match(ui, /\/network\/students\?q=/, "The inbox UI must call the live student search API");
 assert.match(ui, /\/network\/conversations\//, "The inbox UI must load live conversations");
 assert.match(ui, /onDecline/, "Incoming connection requests in search results must support declining");
 assert.match(ui, /Clear history/, "The inbox UI must provide a clear-history action");
 assert.match(ui, /deleteMessage/, "The inbox UI must provide per-message deletion");
 assert.match(ui, /left !== null/, "Unconnected students must not be treated as a busy connection action");
+assert.match(ui, /connection-profile/, "Selecting a connection must expose its compact profile preview");
 assert.match(workspace, /id: "connections", label: "Connections & inbox"/, "The student workspace needs an inbox section");
 assert.match(shell, /Search students by name or ID/, "The top bar must support student search");
 
