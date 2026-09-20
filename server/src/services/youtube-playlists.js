@@ -30,17 +30,19 @@ function playlistIdFromInput(value) {
 }
 
 function normaliseSearchItem(item) {
-  const playlistId = cleanText(item?.id?.playlistId || item?.id, 120);
+  // The admin save flow fetches a playlist first, which gives us an already-normalised
+  // object. Search responses use id.playlistId, while playlist-detail responses use id.
+  const playlistId = cleanText(item?.youtubePlaylistId || item?.id?.playlistId || item?.id, 120);
   if (!playlistId) return null;
   const snippet = item?.snippet || {};
   return {
     youtubePlaylistId: playlistId,
-    title: cleanText(snippet.title, 255) || "Untitled YouTube playlist",
-    description: cleanText(snippet.description, 10000) || null,
-    channelTitle: cleanText(snippet.channelTitle, 255) || null,
-    thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || null,
-    playlistUrl: playlistUrl(playlistId),
-    itemCount: Number.isFinite(Number(item?.contentDetails?.itemCount)) ? Number(item.contentDetails.itemCount) : null,
+    title: cleanText(snippet.title || item?.title, 255) || "Untitled YouTube playlist",
+    description: cleanText(snippet.description || item?.description, 10000) || null,
+    channelTitle: cleanText(snippet.channelTitle || item?.channelTitle, 255) || null,
+    thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || item?.thumbnailUrl || null,
+    playlistUrl: cleanText(item?.playlistUrl, 600) || playlistUrl(playlistId),
+    itemCount: Number.isFinite(Number(item?.contentDetails?.itemCount ?? item?.itemCount)) ? Number(item?.contentDetails?.itemCount ?? item?.itemCount) : null,
   };
 }
 

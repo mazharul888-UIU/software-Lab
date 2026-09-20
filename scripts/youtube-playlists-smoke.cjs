@@ -1,4 +1,6 @@
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const { join } = require("node:path");
 
 const previousKey = process.env.YOUTUBE_API_KEY;
 const originalFetch = global.fetch;
@@ -47,6 +49,8 @@ const { searchYouTubePlaylists } = require("../server/src/services/youtube-playl
     const direct = await searchYouTubePlaylists("https://www.youtube.com/playlist?list=PLmockCourse1234", 1);
     assert.equal(direct[0].itemCount, 18);
     assert.match(calls[1].pathname, /\/playlists$/);
+    const playlistService = readFileSync(join(__dirname, "..", "server", "src", "services", "youtube-playlists.js"), "utf8");
+    assert.match(playlistService, /item\?\.youtubePlaylistId \|\| item\?\.id\?\.playlistId/);
     console.log("YouTube playlist search smoke test passed.");
   } finally {
     global.fetch = originalFetch;
