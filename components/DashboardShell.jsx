@@ -111,7 +111,7 @@ export default function DashboardShell({
             <button className={`dash-side-link ${active === id ? "dash-side-link-active" : ""}`} onClick={() => navigate(id)}>
               <Icon size={17} strokeWidth={2} />
               <span className="flex-1">{label}</span>
-              {badge ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${active === id ? "bg-white/15 text-white" : "bg-coral/12 text-coral"}`}>{badge}</span> : null}
+              {badge ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${active === id ? "bg-cobalt/10 text-cobalt" : "bg-coral/12 text-coral"}`}>{badge}</span> : null}
             </button>
           </div>
         ))}
@@ -183,7 +183,7 @@ export default function DashboardShell({
             </div>
             <div className="relative" ref={profileMenuRef}>
               <button onClick={() => { setProfileOpen((open) => !open); setNotificationsOpen(false); }} className="clay-profile-button flex h-11 items-center gap-2 rounded-2xl border border-ink/[0.08] bg-white/60 pl-1.5 pr-2.5 transition hover:bg-white" aria-haspopup="menu" aria-expanded={profileOpen} aria-controls="dashboard-profile-menu">
-                <span className={`grid h-8 w-8 place-items-center overflow-hidden rounded-xl text-xs font-extrabold text-white ${role === "admin" ? "bg-plum" : "bg-cobalt"}`}>{profileAvatar ? <img src={profileAvatar} alt="" className="h-full w-full object-cover" /> : name.split(" ").map((x) => x[0]).slice(0, 2).join("")}</span>
+                <span className={`grid h-8 w-8 place-items-center overflow-hidden rounded-full text-xs font-extrabold text-white ${role === "admin" ? "bg-plum" : "bg-cobalt"}`}>{profileAvatar ? <img src={profileAvatar} alt="" className="h-full w-full object-cover" /> : name.split(" ").map((x) => x[0]).slice(0, 2).join("")}</span>
                 <span className="hidden text-left sm:block">
                   <b className="block max-w-28 truncate text-xs">{name}</b>
                   <small className="block text-[10px] capitalize text-muted">{role}</small>
