@@ -329,9 +329,6 @@ export default function StudentWorkspace() {
   const [overviewData, setOverviewData] = useState(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [overviewError, setOverviewError] = useState("");
-  const [playlistRecommendations, setPlaylistRecommendations] = useState({ items: [], source: {} });
-  const [playlistsLoading, setPlaylistsLoading] = useState(true);
-  const [playlistsError, setPlaylistsError] = useState("");
   const [platformConfig, setPlatformConfig] = useState({
     features: { coverLetterEnabled: true },
     ai: { coverLetterTone: "Professional" },
@@ -536,29 +533,6 @@ export default function StudentWorkspace() {
     };
   }, []);
 
-  const loadPlaylistRecommendations = async ({ silent = false } = {}) => {
-    if (!silent) {
-      setPlaylistsLoading(true);
-      setPlaylistsError("");
-    }
-    try {
-      const result = await apiRequest("/playlists/recommendations");
-      setPlaylistRecommendations({
-        items: Array.isArray(result?.items) ? result.items : [],
-        source: result?.source || {},
-      });
-      setPlaylistsError("");
-    } catch (error) {
-      if (!silent) setPlaylistsError(error.message);
-    } finally {
-      if (!silent) setPlaylistsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPlaylistRecommendations();
-  }, []);
-
   const loadEvents = async ({ silent = false } = {}) => {
     if (!silent) {
       setEventsLoading(true);
@@ -632,24 +606,6 @@ export default function StudentWorkspace() {
   const notify = (message) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 3200);
-  };
-
-  const updatePlaylistState = async (playlistId, state) => {
-    try {
-      const result = await apiRequest(`/playlists/${playlistId}/state`, {
-        method: "POST",
-        body: JSON.stringify({ state }),
-      });
-      setPlaylistRecommendations((current) => ({
-        ...current,
-        items: current.items.map((item) => Number(item.id) === Number(playlistId)
-          ? { ...item, state: result.state }
-          : item),
-      }));
-      notify(result.message);
-    } catch (error) {
-      notify(error.message);
-    }
   };
 
   const saveProfile = async (profile) => {
@@ -962,7 +918,7 @@ export default function StudentWorkspace() {
           />
         )}
         {active === "analytics" && <AnalyticsPage notify={notify} data={overviewData} onNavigate={setActive} />}
-        {active === "learning" && <LearningPage notify={notify} playlists={playlistRecommendations.items} source={playlistRecommendations.source} loading={playlistsLoading} error={playlistsError} onRetry={loadPlaylistRecommendations} onStateChange={updatePlaylistState} />}
+        {active === "learning" && <LearningPage notify={notify} />}
         {active === "community" && <CommunityPage posts={posts} setPosts={setPosts} loading={communityLoading} error={communityError} onRetry={loadCommunity} notify={notify} viewer={currentUser} onNewPost={() => setModal({ type: "post" })} postingStatus={postingStatus} />}
         {active === "connections" && <ConnectionsPage search={studentSearch} setSearch={setStudentSearch} currentUser={currentUser} notify={notify} />}
         {active === "events" && <EventsPage events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} reservingEventId={reservingEventId} cancellingEventId={cancellingEventId} onRegister={reserveEvent} onCancelReservation={cancelEventReservation} />}
@@ -1857,9 +1813,39 @@ function AnalyticsPage({ notify, data, onNavigate }) {
   );
 }
 
-function LearningPage({ notify, playlists, source, loading, error, onRetry, onStateChange }) {
+function LearningPage({ notify }) {
   const [category, setCategory] = useState("All resources");
+  const [skillQuery, setSkillQuery] = useState("");
+  const [searchedSkill, setSearchedSkill] = useState("");
+  const [youtubeResources, setYoutubeResources] = useState([]);
+  const [youtubeSource, setYoutubeSource] = useState({});
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const [youtubeError, setYoutubeError] = useState("");
   const filtered = category === "All resources" ? resources : resources.filter((item) => item.category.includes(category));
+  const connectionIssue = Boolean(youtubeSource.errorMessage) || ![undefined, "ready", "cached", "no_results", "not_configured"].includes(youtubeSource.status);
+  const searchSkillResources = async (event, nextSkill = skillQuery) => {
+    event?.preventDefault();
+    const skill = nextSkill.trim();
+    if (skill.length < 2) return notify("Write the skill you want to learn first.");
+    setYoutubeLoading(true);
+    setYoutubeError("");
+    try {
+      const result = await apiRequest(`/youtube-resources?skill=${encodeURIComponent(skill)}`);
+      setSearchedSkill(result.skill || skill);
+      setYoutubeResources(Array.isArray(result.items) ? result.items : []);
+      setYoutubeSource(result.source || {});
+    } catch (requestError) {
+      setYoutubeResources([]);
+      setYoutubeSource({});
+      setYoutubeError(requestError.message);
+    } finally {
+      setYoutubeLoading(false);
+    }
+  };
+  const chooseQuickSkill = (skill) => {
+    setSkillQuery(skill);
+    searchSkillResources(null, skill);
+  };
   const playlistConnectionError = Boolean(source.errorMessage) || !["ready", "cached", "no_results", "profile_incomplete", "not_configured"].includes(source.status);
   const emptyPlaylistHeading = source.profileReady === false
     ? "Add a skill to unlock playlist matches"
@@ -1883,6 +1869,20 @@ function LearningPage({ notify, playlists, source, loading, error, onRetry, onSt
       </section>
       <section className="panel overflow-hidden p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><span className="eyebrow"><Youtube size={14} /> Skill resource finder</span><h2 className="mt-2 text-xl font-extrabold tracking-[-0.04em]">What skill do you want to gain?</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-muted">Search a skill to get up to 20 YouTube videos. A resource suggested by your admin for the same skill always appears first.</p></div>
+          {searchedSkill && <span className="tag !bg-cobalt/10 !text-cobalt">{youtubeResources.length} of {youtubeSource.limit || 20} results</span>}
+        </div>
+        <form onSubmit={searchSkillResources} className="mt-5 flex flex-col gap-3 sm:flex-row"><label className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={17} /><input value={skillQuery} onChange={(event) => setSkillQuery(event.target.value)} className="input min-h-12 pl-11" placeholder="e.g. React, SQL, Figma, Python, public speaking" /></label><button disabled={youtubeLoading} className="btn-primary min-h-12 disabled:opacity-50"><Search size={15} /> {youtubeLoading ? "Searching..." : "Search videos"}</button></form>
+        <div className="mt-3 flex flex-wrap gap-2"><span className="py-1 text-[10px] font-bold uppercase tracking-[.1em] text-muted">Try:</span>{["React", "SQL", "Python", "Figma", "Public speaking"].map((skill) => <button key={skill} type="button" onClick={() => chooseQuickSkill(skill)} className="tag transition hover:!bg-cobalt/10 hover:!text-cobalt">{skill}</button>)}</div>
+        {youtubeLoading && <div className="grid min-h-52 place-items-center text-center"><div><RefreshCw className="mx-auto animate-spin text-cobalt" size={25} /><p className="mt-3 text-xs font-bold text-muted">Finding the top YouTube videos for {skillQuery || "this skill"}...</p></div></div>}
+        {!youtubeLoading && youtubeError && <div className="mt-5 rounded-2xl bg-coral/10 p-4 text-sm text-coral"><AlertTriangle className="mb-2" size={18} /><b className="block">Videos could not be loaded</b><p className="mt-1 text-xs leading-5">{youtubeError}</p></div>}
+        {!youtubeLoading && !youtubeError && searchedSkill && youtubeSource.errorMessage && <div className="mt-5 rounded-2xl bg-coral/10 p-4 text-xs text-coral"><b>Automatic YouTube results are unavailable.</b> {youtubeSource.errorMessage}{youtubeSource.adminCount ? " Your administrator’s matching resources are still shown below." : ""}</div>}
+        {!youtubeLoading && !youtubeError && youtubeResources.length > 0 && <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{youtubeResources.map((resource) => <article key={resource.id} className="overflow-hidden rounded-[22px] border border-ink/[0.08] bg-white/55 shadow-sm dark:bg-white/[0.03]"><div className="relative aspect-video overflow-hidden bg-ink/[0.06]">{resource.thumbnail_url ? <img src={resource.thumbnail_url} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="grid h-full place-items-center text-cobalt"><Youtube size={38} /></span>}<span className={`absolute left-3 top-3 rounded-full px-2 py-1 text-[9px] font-extrabold ${resource.assignedByAdmin ? "bg-plum text-white" : "bg-white/90 text-cobalt"}`}>{resource.assignedByAdmin ? "Suggested by admin" : "YouTube result"}</span></div><div className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="line-clamp-2 text-sm font-extrabold leading-5" title={resource.title}>{resource.title}</h3><p className="mt-1 truncate text-[11px] font-semibold text-muted">{resource.channel_title || "YouTube"}</p></div><Youtube className="shrink-0 text-coral" size={19} /></div><p className="mt-3 line-clamp-2 text-[11px] leading-5 text-muted">{resource.recommendationReason}</p><div className="mt-3 flex flex-wrap gap-1.5">{(Array.isArray(resource.tags) ? resource.tags : []).slice(0, 3).map((tag) => <span className="tag !px-2 !py-1 !text-[9px]" key={tag}>{tag}</span>)}</div><a href={resource.watch_url} target="_blank" rel="noreferrer" className="btn-primary mt-4 min-h-9 w-full text-xs"><Play size={14} fill="currentColor" /> Watch on YouTube</a></div></article>)}</div>}
+        {!youtubeLoading && !youtubeError && searchedSkill && youtubeResources.length === 0 && <div className={`mt-5 rounded-2xl p-5 text-center ${connectionIssue ? "bg-coral/10 text-coral" : "bg-ink/[0.035]"}`}><Youtube className={`mx-auto ${connectionIssue ? "text-coral" : "text-cobalt"}`} size={28} /><h3 className="mt-3 text-sm font-extrabold">{connectionIssue ? "YouTube video search needs attention" : `No video results for “${searchedSkill}” yet`}</h3><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-muted">{youtubeSource.errorMessage || "Try a more specific skill, for example: React hooks, SQL joins or Figma prototyping."}</p></div>}
+        {!youtubeLoading && !youtubeError && !searchedSkill && <div className="mt-5 rounded-2xl bg-ink/[0.035] p-5 text-center"><Youtube className="mx-auto text-cobalt" size={28} /><h3 className="mt-3 text-sm font-extrabold">Search the skill you want to learn</h3><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-muted">CareerCube will show up to 20 current YouTube videos. Matching resources suggested by your admin appear before public YouTube results.</p></div>}
+      </section>
+      {false && <section className="panel overflow-hidden p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div><span className="eyebrow"><Youtube size={14} /> YouTube learning playlists</span><h2 className="mt-2 text-xl font-extrabold tracking-[-0.04em]">Picked for your next skill.</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-muted">Playlists are matched to your saved skills, career interests and target role. Admin suggestions appear first.</p></div>
           <button onClick={() => onRetry()} className="btn-secondary min-h-9"><RefreshCw size={14} /> Refresh</button>
         </div>
@@ -1897,7 +1897,7 @@ function LearningPage({ notify, playlists, source, loading, error, onRetry, onSt
           </article>;
         })}</div>}
         {!loading && !error && playlists.length === 0 && <div className={`mt-5 rounded-2xl p-5 text-center ${playlistConnectionError ? "bg-coral/10 text-coral" : "bg-ink/[0.035]"}`}><Youtube className={`mx-auto ${playlistConnectionError ? "text-coral" : "text-cobalt"}`} size={28} /><h3 className="mt-3 text-sm font-extrabold">{emptyPlaylistHeading}</h3><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-muted">{emptyPlaylistMessage}</p>{playlistConnectionError && <button onClick={() => onRetry()} className="mt-3 text-xs font-extrabold underline">Try again</button>}</div>}
-      </section>
+      </section>}
       <div className="flex flex-wrap gap-2">{["All resources", "Career Toolkit", "Data & Analytics", "Development", "Communication"].map((item) => <button key={item} onClick={() => setCategory(item)} className={`min-h-9 rounded-xl px-3 text-xs font-bold ${category === item ? "bg-ink text-white" : "bg-white/60 text-muted"}`}>{item}</button>)}</div>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((resource) => (

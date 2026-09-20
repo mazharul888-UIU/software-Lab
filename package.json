@@ -23,6 +23,7 @@
     "test:verified-source-jobs": "node scripts/verified-source-jobs-smoke.cjs",
     "test:external-jobs": "node scripts/external-jobs-smoke.cjs",
     "test:youtube-playlists": "node scripts/youtube-playlists-smoke.cjs",
+    "test:youtube-resources": "node scripts/youtube-resource-search-smoke.cjs",
     "test:events": "node scripts/events-smoke.cjs",
     "test:community-posts": "node scripts/community-posts-smoke.cjs",
     "test:student-network": "node scripts/student-network-smoke.cjs",

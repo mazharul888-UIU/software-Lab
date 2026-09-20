@@ -15,6 +15,11 @@ const {
   saveAdminPlaylistAssignment,
   searchYouTubePlaylists,
 } = require("../services/youtube-playlists");
+const {
+  getAdminYouTubeResources,
+  saveAdminYouTubeResource,
+  searchYouTubeVideos,
+} = require("../services/youtube-resources");
 
 const router = express.Router();
 router.use(authenticate, adminOnly);
@@ -163,6 +168,46 @@ router.post("/youtube-playlists", async (req, res, next) => {
       message: result.assignedCount
         ? `Playlist suggested to ${result.assignedCount} student${result.assignedCount === 1 ? "" : "s"}`
         : "Playlist saved to the CareerCube learning library",
+    });
+  } catch (error) { next(error); }
+});
+
+router.get("/youtube-resources", async (_req, res, next) => {
+  try {
+    res.json(await getAdminYouTubeResources());
+  } catch (error) { next(error); }
+});
+
+router.post("/youtube-resources/search", async (req, res, next) => {
+  try {
+    const term = cleanText(req.body?.query, 200);
+    if (term.length < 2) return res.status(400).json({ error: "Enter a skill or paste a YouTube video URL" });
+    res.json({ items: await searchYouTubeVideos(term, 20) });
+  } catch (error) { next(error); }
+});
+
+router.post("/youtube-resources", async (req, res, next) => {
+  try {
+    const resourceInput = cleanText(req.body?.videoId || req.body?.videoUrl, 800);
+    const skill = cleanText(req.body?.skill, 160);
+    if (!resourceInput) return res.status(400).json({ error: "Choose a YouTube video first" });
+    if (skill.length < 2) return res.status(400).json({ error: "Enter the skill this resource teaches" });
+    const tags = Array.from(new Set([skill, ...(Array.isArray(req.body?.tags) ? req.body.tags : [])].map((tag) => cleanText(tag, 80)).filter(Boolean))).slice(0, 12);
+    const result = await saveAdminYouTubeResource({
+      resourceInput,
+      studentIds: req.body?.studentIds,
+      assignToAll: Boolean(req.body?.assignToAll),
+      reason: req.body?.reason,
+      tags,
+      status: req.body?.status,
+      adminId: req.user.id,
+    });
+    res.status(201).json({
+      resource: result.resource,
+      assignedCount: result.assignedCount,
+      message: result.assignedCount
+        ? `Resource suggested to ${result.assignedCount} student${result.assignedCount === 1 ? "" : "s"}`
+        : "Resource saved to the CareerCube learning library",
     });
   } catch (error) { next(error); }
 });

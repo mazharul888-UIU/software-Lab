@@ -3,6 +3,7 @@ const { pool, query } = require("../config/db");
 const { authenticate } = require("../middleware/auth");
 const { ensureEventSchema } = require("../services/event-schema");
 const { getStudentPlaylistRecommendations, setStudentPlaylistState } = require("../services/youtube-playlists");
+const { getStudentSkillResources } = require("../services/youtube-resources");
 
 const router = express.Router();
 
@@ -111,6 +112,13 @@ router.post("/playlists/:id/state", authenticate, async (req, res, next) => {
       state: req.body?.state,
     });
     res.json({ ...result, message: result.state === "completed" ? "Playlist marked complete" : "Playlist saved to your learning list" });
+  } catch (error) { next(error); }
+});
+
+router.get("/youtube-resources", authenticate, async (req, res, next) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ error: "Student account required" });
+    res.json(await getStudentSkillResources({ userId: req.user.id, skill: req.query?.skill }));
   } catch (error) { next(error); }
 });
 
