@@ -68,6 +68,7 @@ import {
   resources,
 } from "../../lib/mockData";
 import { apiRequest } from "../../lib/api";
+import { getRoleSession, saveRoleSession } from "../../lib/roleSession";
 import { socialProfileApiValue, socialProfileDisplay, socialProfileError, socialProfileHref } from "../../lib/socialProfiles";
 
 
@@ -126,7 +127,7 @@ const socialProfileValues = (user = {}) => Object.fromEntries(
 
 function readStudentUser() {
   try {
-    const session = JSON.parse(localStorage.getItem("careerforge_session"));
+    const session = getRoleSession("student");
     if (session?.role === "student") {
       return {
         ...session,
@@ -398,7 +399,7 @@ export default function StudentWorkspace() {
       try {
         const profile = await apiRequest("/auth/me");
         if (cancelled || !profile) return;
-        localStorage.setItem("careerforge_session", JSON.stringify(profile));
+        saveRoleSession(profile);
         setCurrentUser(profile);
         setCvData((current) => ({
           ...current,
@@ -630,7 +631,7 @@ export default function StudentWorkspace() {
           telegram: socialProfileApiValue("telegram", profile.telegram),
         }),
       });
-      localStorage.setItem("careerforge_session", JSON.stringify(nextUser));
+      saveRoleSession(nextUser);
       setCurrentUser(nextUser);
       setCvData((current) => ({
         ...current,

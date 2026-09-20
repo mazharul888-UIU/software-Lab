@@ -3,10 +3,11 @@ import { Bell, ChevronDown, LogOut, Menu, Search, X } from "lucide-react";
 import Brand from "./Brand";
 import ThemeToggle from "./ThemeToggle";
 import { navigateFresh } from "../lib/sessionNavigation";
+import { clearRoleSession, getRoleSession } from "../lib/roleSession";
 
 function getSessionName(role) {
   try {
-    const session = JSON.parse(localStorage.getItem("careerforge_session"));
+    const session = getRoleSession(role);
     if (session?.role === role && session?.name) return session.name;
   } catch {}
   return role === "admin" ? "Administrator" : "Student";
@@ -47,7 +48,7 @@ export default function DashboardShell({
       return;
     }
     try {
-      const session = JSON.parse(localStorage.getItem("careerforge_session"));
+      const session = getRoleSession(role);
       if (session?.name) setName(session.name);
     } catch {}
   }, [profileName]);
@@ -82,8 +83,7 @@ export default function DashboardShell({
   };
 
   const logout = () => {
-    localStorage.removeItem("careerforge_session");
-    localStorage.removeItem("careerforge_token");
+    clearRoleSession(role);
     navigateFresh("/");
   };
 

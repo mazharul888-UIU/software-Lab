@@ -27,6 +27,7 @@ import {
   verifyStudentEmail,
 } from "../lib/api";
 import { navigateFresh } from "../lib/sessionNavigation";
+import { saveRoleSession } from "../lib/roleSession";
 
 export default function AuthExperience({ role = "student" }) {
   const { search } = useLocation();
@@ -58,8 +59,7 @@ export default function AuthExperience({ role = "student" }) {
   const passwordResetCodeActive = passwordReset?.stage === "verify";
 
   const enterWorkspace = (session, token) => {
-    if (token) localStorage.setItem("careerforge_token", token);
-    localStorage.setItem("careerforge_session", JSON.stringify(session));
+    saveRoleSession(session, token);
     navigateFresh(workspacePath);
   };
 

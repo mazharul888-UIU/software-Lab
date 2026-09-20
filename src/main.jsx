@@ -9,6 +9,7 @@ import CommunityLandingPage from "../components/public/CommunityLandingPage";
 import ResourcesLandingPage from "../components/public/ResourcesLandingPage";
 import { RouterProvider, useLocation } from "../lib/router";
 import { clearNavigationToken, navigateFresh } from "../lib/sessionNavigation";
+import { getRoleSession, getRoleToken } from "../lib/roleSession";
 import { ThemeProvider } from "../lib/theme";
 
 const RECOVERY_KEY = "careerforge:route-recovery";
@@ -56,11 +57,8 @@ function ScrollToTop() {
 }
 
 function RequireAuth({ role, children }) {
-  let session = null;
-  try {
-    session = JSON.parse(localStorage.getItem("careerforge_session"));
-  } catch {}
-  const token = localStorage.getItem("careerforge_token");
+  const session = getRoleSession(role);
+  const token = getRoleToken(role);
   const authenticated = Boolean(token && session?.role === role);
 
   useEffect(() => {
