@@ -176,6 +176,24 @@ function buildRecommendationQuery(profile) {
   return `${parts.join(" ")} learning playlist`;
 }
 
+function playlistSearchErrorMessage(error) {
+  const code = cleanText(error?.code, 80);
+  const message = cleanText(error?.message, 300);
+  if (/api key not valid/i.test(message) || code === "keyInvalid") {
+    return "The YouTube connection needs to be renewed by an administrator. Please try again shortly.";
+  }
+  if (code === "accessNotConfigured") {
+    return "YouTube Data API v3 must be enabled in CareerCube's Google Cloud project before playlists can load.";
+  }
+  if (code === "ipRefererBlocked" || code === "forbidden") {
+    return "The current YouTube API key restrictions are blocking CareerCube's server connection.";
+  }
+  if (code === "quotaExceeded" || code === "dailyLimitExceeded") {
+    return "CareerCube has reached its temporary YouTube search limit. Please try again later.";
+  }
+  return message || "YouTube playlists could not be loaded right now.";
+}
+
 function profileCacheKey(profile) {
   const stableProfile = {
     targetRole: profile.targetRole.toLowerCase(),
@@ -210,14 +228,20 @@ async function getAutomaticRecommendations(userId) {
     [cacheKey],
   );
   if (cache) {
-    const items = await findPlaylistsByYoutubeIds(parseJson(cache.playlist_ids, []));
-    return { items, profileReady: true, configured: true, status: "cached", queryText };
+    const cachedIds = parseJson(cache.playlist_ids, []);
+    const items = await findPlaylistsByYoutubeIds(cachedIds);
+    if (items.length) return { items, profileReady: true, configured: true, status: "cached", queryText };
+    // Never keep an empty or stale result stuck on a student's screen for twelve hours.
+    await query("DELETE FROM youtube_playlist_search_cache WHERE cache_key=?", [cacheKey]);
   }
 
   try {
     const discovered = await searchYouTubePlaylists(queryText, 6);
     for (const item of discovered) await upsertPlaylist(item, { source: "youtube", status: "published", tags: [...profile.skills.slice(0, 3), ...profile.interests.slice(0, 2)] });
     const playlistIds = discovered.map((item) => item.youtubePlaylistId);
+    if (!playlistIds.length) {
+      return { items: [], profileReady: true, configured: true, status: "no_results", queryText };
+    }
     await query(
       `INSERT INTO youtube_playlist_search_cache (cache_key, query_text, playlist_ids, expires_at)
        VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ${CACHE_HOURS} HOUR))
@@ -226,7 +250,15 @@ async function getAutomaticRecommendations(userId) {
     );
     return { items: await findPlaylistsByYoutubeIds(playlistIds), profileReady: true, configured: true, status: "ready", queryText };
   } catch (error) {
-    return { items: [], profileReady: true, configured: true, status: error.code || "unavailable", queryText };
+    console.warn("[youtube-playlists] Automatic playlist search failed", { code: error.code || "unavailable", statusCode: error.statusCode || 500 });
+    return {
+      items: [],
+      profileReady: true,
+      configured: true,
+      status: error.code || "unavailable",
+      errorMessage: playlistSearchErrorMessage(error),
+      queryText,
+    };
   }
 }
 
@@ -286,6 +318,7 @@ async function getStudentPlaylistRecommendations(userId) {
       configured: automatic.configured,
       profileReady: automatic.profileReady,
       status: automatic.status,
+      errorMessage: automatic.errorMessage || null,
       queryText: automatic.queryText || null,
       automaticCount: automaticItems.length,
       adminCount: manualItems.length,

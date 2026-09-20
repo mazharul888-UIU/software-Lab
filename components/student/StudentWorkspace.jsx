@@ -1860,6 +1860,21 @@ function AnalyticsPage({ notify, data, onNavigate }) {
 function LearningPage({ notify, playlists, source, loading, error, onRetry, onStateChange }) {
   const [category, setCategory] = useState("All resources");
   const filtered = category === "All resources" ? resources : resources.filter((item) => item.category.includes(category));
+  const playlistConnectionError = Boolean(source.errorMessage) || !["ready", "cached", "no_results", "profile_incomplete", "not_configured"].includes(source.status);
+  const emptyPlaylistHeading = source.profileReady === false
+    ? "Add a skill to unlock playlist matches"
+    : source.configured === false
+      ? "YouTube suggestions are being connected"
+      : playlistConnectionError
+        ? "YouTube playlists need attention"
+        : "No playlists match yet";
+  const emptyPlaylistMessage = source.profileReady === false
+    ? "Add your target role, career interests or skills in Profile & settings. An admin can still send you a playlist directly."
+    : source.configured === false
+      ? "Your admin can add a curated playlist now, and automatic matches will appear once the YouTube connection is available."
+      : playlistConnectionError
+        ? source.errorMessage || "YouTube could not be reached. Please refresh, or ask an administrator to check the connection."
+        : "Refresh after updating your profile, or ask an administrator for a curated learning playlist.";
   return (
     <div className="space-y-5">
       <section className="panel grid overflow-hidden md:grid-cols-[1fr_.6fr]">
@@ -1881,7 +1896,7 @@ function LearningPage({ notify, playlists, source, loading, error, onRetry, onSt
             <div className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="line-clamp-2 text-sm font-extrabold leading-5" title={playlist.title}>{playlist.title}</h3><p className="mt-1 truncate text-[11px] font-semibold text-muted">{playlist.channel_title || "YouTube"}{playlist.item_count ? ` · ${playlist.item_count} videos` : ""}</p></div><Youtube className="shrink-0 text-coral" size={19} /></div><p className="mt-3 line-clamp-2 text-[11px] leading-5 text-muted">{playlist.recommendationReason}</p><div className="mt-3 flex flex-wrap gap-1.5">{(Array.isArray(playlist.tags) ? playlist.tags : []).slice(0, 3).map((tag) => <span className="tag !px-2 !py-1 !text-[9px]" key={tag}>{tag}</span>)}</div><div className="mt-4 flex gap-2"><a href={playlist.playlist_url} target="_blank" rel="noreferrer" className="btn-primary min-h-9 flex-1 text-xs"><Play size={14} fill="currentColor" /> Open playlist</a>{!saved ? <button onClick={() => onStateChange(playlist.id, "saved")} className="btn-secondary min-h-9 px-3" aria-label={`Save ${playlist.title}`}><Bookmark size={14} /></button> : !completed ? <button onClick={() => onStateChange(playlist.id, "completed")} className="btn-secondary min-h-9 px-3 text-jade" aria-label={`Mark ${playlist.title} complete`}><Check size={15} /></button> : null}</div></div>
           </article>;
         })}</div>}
-        {!loading && !error && playlists.length === 0 && <div className="mt-5 rounded-2xl bg-ink/[0.035] p-5 text-center"><Youtube className="mx-auto text-cobalt" size={28} /><h3 className="mt-3 text-sm font-extrabold">{source.profileReady === false ? "Add a skill to unlock playlist matches" : source.configured === false ? "YouTube suggestions are being connected" : "No playlists match yet"}</h3><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-muted">{source.profileReady === false ? "Add your target role, career interests or skills in Profile & settings. An admin can still send you a playlist directly." : source.configured === false ? "Your admin can add a curated playlist now, and automatic matches will appear once the YouTube connection is available." : "Refresh after updating your profile, or ask an administrator for a curated learning playlist."}</p></div>}
+        {!loading && !error && playlists.length === 0 && <div className={`mt-5 rounded-2xl p-5 text-center ${playlistConnectionError ? "bg-coral/10 text-coral" : "bg-ink/[0.035]"}`}><Youtube className={`mx-auto ${playlistConnectionError ? "text-coral" : "text-cobalt"}`} size={28} /><h3 className="mt-3 text-sm font-extrabold">{emptyPlaylistHeading}</h3><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-muted">{emptyPlaylistMessage}</p>{playlistConnectionError && <button onClick={() => onRetry()} className="mt-3 text-xs font-extrabold underline">Try again</button>}</div>}
       </section>
       <div className="flex flex-wrap gap-2">{["All resources", "Career Toolkit", "Data & Analytics", "Development", "Communication"].map((item) => <button key={item} onClick={() => setCategory(item)} className={`min-h-9 rounded-xl px-3 text-xs font-bold ${category === item ? "bg-ink text-white" : "bg-white/60 text-muted"}`}>{item}</button>)}</div>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
