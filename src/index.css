@@ -3499,32 +3499,98 @@ textarea.input {
   }
 }
 
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
+  html,
+  body,
+  #root {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body {
+    color: #1e2430 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   body * {
     visibility: hidden;
   }
+
+  .clay-dashboard-sidebar,
+  .clay-dashboard-topbar,
+  .clay-page-heading,
+  .career-vault-editor-shell,
+  .career-vault-preview-shell > :not(#resume-print) {
+    display: none !important;
+  }
+
+  .app-clay-shell,
+  .app-clay-shell > div,
+  .clay-dashboard-content,
+  .clay-dashboard-content > .animate-enter,
+  .career-vault-layout,
+  .career-vault-preview-shell {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+
   #resume-print,
   #resume-print * {
     visibility: visible;
   }
+
   #resume-print {
-    position: absolute;
-    inset: 0;
-    width: 100%;
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
     background: #fff !important;
     color: #1e2430 !important;
-    box-shadow: none;
-    border: 0;
+    box-shadow: none !important;
   }
+
+  #resume-print header,
+  #resume-print section,
+  #resume-print li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   #resume-print .cv-empty-state {
     display: none;
-  }
-  .career-vault-editor-shell,
-  .career-vault-preview-shell {
-    position: static;
-    height: auto;
-    max-height: none;
-    overflow: visible;
   }
 }
 

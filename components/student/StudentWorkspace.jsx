@@ -826,6 +826,17 @@ export default function StudentWorkspace() {
     }
   };
 
+  const exportCareerVault = () => {
+    const previousTitle = document.title;
+    const resumeName = String(cvData.name || currentUser.name || "CareerCube").trim();
+    document.title = `${resumeName} - CV`;
+    try {
+      window.print();
+    } finally {
+      document.title = previousTitle;
+    }
+  };
+
   const pageActions = {
     jobs: (
       <button className="btn-secondary"><BellRing size={16} /> Create job alert</button>
@@ -833,7 +844,7 @@ export default function StudentWorkspace() {
     vault: (
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button type="button" onClick={saveCareerVault} disabled={cvSaving} className="btn-accent disabled:cursor-wait disabled:opacity-70"><Save size={16} /> {cvSaving ? "Saving..." : "Save CV"}</button>
-        <button type="button" onClick={() => window.print()} className="btn-secondary"><Download size={16} /> Export PDF</button>
+        <button type="button" onClick={exportCareerVault} className="btn-secondary"><Download size={16} /> Export PDF</button>
       </div>
     ),
     community: (
