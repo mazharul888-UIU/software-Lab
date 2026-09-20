@@ -3453,13 +3453,18 @@ textarea.input {
   }
 }
 
-/* Keep the live CV beside the editor while the longer form scrolls. */
+/* Give the CV editor and preview matching, independently scrollable columns. */
 @media (min-width: 1280px) {
+  .career-vault-layout {
+    height: clamp(620px, calc(100dvh - 210px), 820px);
+    align-items: stretch;
+  }
+
+  .career-vault-editor-shell,
   .career-vault-preview-shell {
-    position: sticky;
-    top: 94px;
-    align-self: start;
-    max-height: calc(100dvh - 110px);
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
@@ -3467,23 +3472,28 @@ textarea.input {
     scrollbar-color: #bcc0c4 transparent;
   }
 
+  .career-vault-editor-shell::-webkit-scrollbar,
   .career-vault-preview-shell::-webkit-scrollbar {
     width: 7px;
   }
 
+  .career-vault-editor-shell::-webkit-scrollbar-track,
   .career-vault-preview-shell::-webkit-scrollbar-track {
     background: transparent;
   }
 
+  .career-vault-editor-shell::-webkit-scrollbar-thumb,
   .career-vault-preview-shell::-webkit-scrollbar-thumb {
     border-radius: 999px;
     background: #bcc0c4;
   }
 
+  :root[data-theme="dark"] .career-vault-editor-shell,
   :root[data-theme="dark"] .career-vault-preview-shell {
     scrollbar-color: #65676b transparent;
   }
 
+  :root[data-theme="dark"] .career-vault-editor-shell::-webkit-scrollbar-thumb,
   :root[data-theme="dark"] .career-vault-preview-shell::-webkit-scrollbar-thumb {
     background: #65676b;
   }
@@ -3509,8 +3519,10 @@ textarea.input {
   #resume-print .cv-empty-state {
     display: none;
   }
+  .career-vault-editor-shell,
   .career-vault-preview-shell {
     position: static;
+    height: auto;
     max-height: none;
     overflow: visible;
   }
