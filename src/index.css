@@ -3453,6 +3453,42 @@ textarea.input {
   }
 }
 
+/* Keep the live CV beside the editor while the longer form scrolls. */
+@media (min-width: 1280px) {
+  .career-vault-preview-shell {
+    position: sticky;
+    top: 94px;
+    align-self: start;
+    max-height: calc(100dvh - 110px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #bcc0c4 transparent;
+  }
+
+  .career-vault-preview-shell::-webkit-scrollbar {
+    width: 7px;
+  }
+
+  .career-vault-preview-shell::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .career-vault-preview-shell::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #bcc0c4;
+  }
+
+  :root[data-theme="dark"] .career-vault-preview-shell {
+    scrollbar-color: #65676b transparent;
+  }
+
+  :root[data-theme="dark"] .career-vault-preview-shell::-webkit-scrollbar-thumb {
+    background: #65676b;
+  }
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -3472,6 +3508,11 @@ textarea.input {
   }
   #resume-print .cv-empty-state {
     display: none;
+  }
+  .career-vault-preview-shell {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 }
 

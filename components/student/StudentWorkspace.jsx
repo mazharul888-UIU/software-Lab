@@ -1497,7 +1497,7 @@ function CareerVault({ notify, photo, setPhoto, data, setData, onSave, saving, d
           <button onClick={() => notify("AI strengthened your summary and added role keywords.")} className="btn-secondary w-full text-cobalt"><Zap size={16} /> Improve with AI</button>
         </div>
       </section>
-      <section>
+      <section className="career-vault-preview-shell" aria-label="Live CV preview">
         <div className="mb-3 flex items-center justify-between"><span className="text-xs font-bold text-muted">LIVE PREVIEW · MODERN EDITORIAL</span><button onClick={() => notify("Resume version duplicated.")} className="btn-ghost"><Plus size={15} /> New version</button></div>
         <article id="resume-print" className="resume-paper min-h-[840px] overflow-hidden rounded-[8px] bg-white p-8 shadow-lift sm:p-12">
           <header className="border-b-2 border-ink pb-7">
