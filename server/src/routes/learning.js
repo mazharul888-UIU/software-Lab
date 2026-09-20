@@ -2,6 +2,7 @@ const express = require("express");
 const { pool, query } = require("../config/db");
 const { authenticate } = require("../middleware/auth");
 const { ensureEventSchema } = require("../services/event-schema");
+const { getStudentPlaylistRecommendations, setStudentPlaylistState } = require("../services/youtube-playlists");
 
 const router = express.Router();
 
@@ -91,6 +92,25 @@ router.post("/assessments/:id/submit", authenticate, async (req, res, next) => {
 router.get("/resources", authenticate, async (req, res, next) => {
   try {
     res.json(await query("SELECT * FROM learning_resources WHERE status='published' ORDER BY featured DESC, created_at DESC"));
+  } catch (error) { next(error); }
+});
+
+router.get("/playlists/recommendations", authenticate, async (req, res, next) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ error: "Student account required" });
+    res.json(await getStudentPlaylistRecommendations(req.user.id));
+  } catch (error) { next(error); }
+});
+
+router.post("/playlists/:id/state", authenticate, async (req, res, next) => {
+  try {
+    if (req.user.role !== "student") return res.status(403).json({ error: "Student account required" });
+    const result = await setStudentPlaylistState({
+      userId: req.user.id,
+      playlistId: Number(req.params.id),
+      state: req.body?.state,
+    });
+    res.json({ ...result, message: result.state === "completed" ? "Playlist marked complete" : "Playlist saved to your learning list" });
   } catch (error) { next(error); }
 });
 

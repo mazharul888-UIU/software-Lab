@@ -56,6 +56,7 @@ import {
   UserRound,
   Users,
   X,
+  Youtube,
   Zap,
 } from "lucide-react";
 import DashboardShell from "../DashboardShell";
@@ -328,6 +329,9 @@ export default function StudentWorkspace() {
   const [overviewData, setOverviewData] = useState(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [overviewError, setOverviewError] = useState("");
+  const [playlistRecommendations, setPlaylistRecommendations] = useState({ items: [], source: {} });
+  const [playlistsLoading, setPlaylistsLoading] = useState(true);
+  const [playlistsError, setPlaylistsError] = useState("");
   const [platformConfig, setPlatformConfig] = useState({
     features: { coverLetterEnabled: true },
     ai: { coverLetterTone: "Professional" },
@@ -532,6 +536,29 @@ export default function StudentWorkspace() {
     };
   }, []);
 
+  const loadPlaylistRecommendations = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setPlaylistsLoading(true);
+      setPlaylistsError("");
+    }
+    try {
+      const result = await apiRequest("/playlists/recommendations");
+      setPlaylistRecommendations({
+        items: Array.isArray(result?.items) ? result.items : [],
+        source: result?.source || {},
+      });
+      setPlaylistsError("");
+    } catch (error) {
+      if (!silent) setPlaylistsError(error.message);
+    } finally {
+      if (!silent) setPlaylistsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPlaylistRecommendations();
+  }, []);
+
   const loadEvents = async ({ silent = false } = {}) => {
     if (!silent) {
       setEventsLoading(true);
@@ -605,6 +632,24 @@ export default function StudentWorkspace() {
   const notify = (message) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 3200);
+  };
+
+  const updatePlaylistState = async (playlistId, state) => {
+    try {
+      const result = await apiRequest(`/playlists/${playlistId}/state`, {
+        method: "POST",
+        body: JSON.stringify({ state }),
+      });
+      setPlaylistRecommendations((current) => ({
+        ...current,
+        items: current.items.map((item) => Number(item.id) === Number(playlistId)
+          ? { ...item, state: result.state }
+          : item),
+      }));
+      notify(result.message);
+    } catch (error) {
+      notify(error.message);
+    }
   };
 
   const saveProfile = async (profile) => {
@@ -917,7 +962,7 @@ export default function StudentWorkspace() {
           />
         )}
         {active === "analytics" && <AnalyticsPage notify={notify} data={overviewData} onNavigate={setActive} />}
-        {active === "learning" && <LearningPage notify={notify} />}
+        {active === "learning" && <LearningPage notify={notify} playlists={playlistRecommendations.items} source={playlistRecommendations.source} loading={playlistsLoading} error={playlistsError} onRetry={loadPlaylistRecommendations} onStateChange={updatePlaylistState} />}
         {active === "community" && <CommunityPage posts={posts} setPosts={setPosts} loading={communityLoading} error={communityError} onRetry={loadCommunity} notify={notify} viewer={currentUser} onNewPost={() => setModal({ type: "post" })} postingStatus={postingStatus} />}
         {active === "connections" && <ConnectionsPage search={studentSearch} setSearch={setStudentSearch} currentUser={currentUser} notify={notify} />}
         {active === "events" && <EventsPage events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} reservingEventId={reservingEventId} cancellingEventId={cancellingEventId} onRegister={reserveEvent} onCancelReservation={cancelEventReservation} />}
@@ -1812,7 +1857,7 @@ function AnalyticsPage({ notify, data, onNavigate }) {
   );
 }
 
-function LearningPage({ notify }) {
+function LearningPage({ notify, playlists, source, loading, error, onRetry, onStateChange }) {
   const [category, setCategory] = useState("All resources");
   const filtered = category === "All resources" ? resources : resources.filter((item) => item.category.includes(category));
   return (
@@ -1820,6 +1865,23 @@ function LearningPage({ notify }) {
       <section className="panel grid overflow-hidden md:grid-cols-[1fr_.6fr]">
         <div className="p-6 sm:p-8"><span className="eyebrow"><Target size={13} /> Personalized next step</span><h2 className="mt-3 text-2xl font-extrabold tracking-[-0.04em]">Finish SQL for Product Decisions</h2><p className="mt-2 max-w-lg text-sm leading-6 text-muted">Completing this course supports three of your top five job matches and closes your biggest analytics gap.</p><div className="mt-5 flex items-center gap-4"><button onClick={() => notify("Course resumed at lesson 7.")} className="btn-accent"><Play size={15} fill="currentColor" /> Continue learning</button><span className="text-xs font-bold text-muted">32 min left</span></div></div>
         <div className="relative hidden place-items-center bg-[#DED2BE] md:grid"><div className="grid h-36 w-36 place-items-center rounded-full border-[20px] border-cobalt bg-white/50"><span className="text-center"><b className="block text-2xl">68%</b><small className="text-[10px] font-bold text-muted">complete</small></span></div></div>
+      </section>
+      <section className="panel overflow-hidden p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><span className="eyebrow"><Youtube size={14} /> YouTube learning playlists</span><h2 className="mt-2 text-xl font-extrabold tracking-[-0.04em]">Picked for your next skill.</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-muted">Playlists are matched to your saved skills, career interests and target role. Admin suggestions appear first.</p></div>
+          <button onClick={() => onRetry()} className="btn-secondary min-h-9"><RefreshCw size={14} /> Refresh</button>
+        </div>
+        {loading && <div className="grid min-h-44 place-items-center text-center"><div><RefreshCw className="mx-auto animate-spin text-cobalt" size={25} /><p className="mt-3 text-xs font-bold text-muted">Finding relevant playlists...</p></div></div>}
+        {!loading && error && <div className="mt-5 rounded-2xl bg-coral/10 p-4 text-sm text-coral"><AlertTriangle className="mb-2" size={18} /><b className="block">Playlists could not be loaded</b><p className="mt-1 text-xs leading-5">{error}</p><button onClick={() => onRetry()} className="mt-3 text-xs font-extrabold underline">Try again</button></div>}
+        {!loading && !error && playlists.length > 0 && <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{playlists.map((playlist) => {
+          const completed = playlist.state === "completed";
+          const saved = playlist.state === "saved" || completed;
+          return <article key={playlist.id} className="overflow-hidden rounded-[22px] border border-ink/[0.08] bg-white/55 shadow-sm dark:bg-white/[0.03]">
+            <div className="relative aspect-video overflow-hidden bg-ink/[0.06]">{playlist.thumbnail_url ? <img src={playlist.thumbnail_url} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="grid h-full place-items-center text-cobalt"><Youtube size={38} /></span>}<span className={`absolute left-3 top-3 rounded-full px-2 py-1 text-[9px] font-extrabold ${playlist.assignedByAdmin ? "bg-plum text-white" : "bg-white/90 text-cobalt"}`}>{playlist.assignedByAdmin ? "Suggested by admin" : "Matched for you"}</span>{completed && <span className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-jade text-white"><Check size={16} /></span>}</div>
+            <div className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="line-clamp-2 text-sm font-extrabold leading-5" title={playlist.title}>{playlist.title}</h3><p className="mt-1 truncate text-[11px] font-semibold text-muted">{playlist.channel_title || "YouTube"}{playlist.item_count ? ` · ${playlist.item_count} videos` : ""}</p></div><Youtube className="shrink-0 text-coral" size={19} /></div><p className="mt-3 line-clamp-2 text-[11px] leading-5 text-muted">{playlist.recommendationReason}</p><div className="mt-3 flex flex-wrap gap-1.5">{(Array.isArray(playlist.tags) ? playlist.tags : []).slice(0, 3).map((tag) => <span className="tag !px-2 !py-1 !text-[9px]" key={tag}>{tag}</span>)}</div><div className="mt-4 flex gap-2"><a href={playlist.playlist_url} target="_blank" rel="noreferrer" className="btn-primary min-h-9 flex-1 text-xs"><Play size={14} fill="currentColor" /> Open playlist</a>{!saved ? <button onClick={() => onStateChange(playlist.id, "saved")} className="btn-secondary min-h-9 px-3" aria-label={`Save ${playlist.title}`}><Bookmark size={14} /></button> : !completed ? <button onClick={() => onStateChange(playlist.id, "completed")} className="btn-secondary min-h-9 px-3 text-jade" aria-label={`Mark ${playlist.title} complete`}><Check size={15} /></button> : null}</div></div>
+          </article>;
+        })}</div>}
+        {!loading && !error && playlists.length === 0 && <div className="mt-5 rounded-2xl bg-ink/[0.035] p-5 text-center"><Youtube className="mx-auto text-cobalt" size={28} /><h3 className="mt-3 text-sm font-extrabold">{source.profileReady === false ? "Add a skill to unlock playlist matches" : source.configured === false ? "YouTube suggestions are being connected" : "No playlists match yet"}</h3><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-muted">{source.profileReady === false ? "Add your target role, career interests or skills in Profile & settings. An admin can still send you a playlist directly." : source.configured === false ? "Your admin can add a curated playlist now, and automatic matches will appear once the YouTube connection is available." : "Refresh after updating your profile, or ask an administrator for a curated learning playlist."}</p></div>}
       </section>
       <div className="flex flex-wrap gap-2">{["All resources", "Career Toolkit", "Data & Analytics", "Development", "Communication"].map((item) => <button key={item} onClick={() => setCategory(item)} className={`min-h-9 rounded-xl px-3 text-xs font-bold ${category === item ? "bg-ink text-white" : "bg-white/60 text-muted"}`}>{item}</button>)}</div>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -10,6 +10,11 @@ const { sanitizeSkillNames } = require("../services/job-matching");
 const { ensureCommunitySchema } = require("../services/community-schema");
 const { analyseContent } = require("../services/content-moderation");
 const { getPlatformSettings, savePlatformSettings } = require("../services/platform-settings");
+const {
+  getAdminYouTubePlaylists,
+  saveAdminPlaylistAssignment,
+  searchYouTubePlaylists,
+} = require("../services/youtube-playlists");
 
 const router = express.Router();
 router.use(authenticate, adminOnly);
@@ -122,6 +127,43 @@ router.patch("/settings", async (req, res, next) => {
       [req.user.id, JSON.stringify({ sections: Object.keys(req.body || {}) }), req.ip || null],
     );
     res.json({ settings: saved, integrations: integrationStatus(), message: "System settings saved" });
+  } catch (error) { next(error); }
+});
+
+router.get("/youtube-playlists", async (_req, res, next) => {
+  try {
+    res.json(await getAdminYouTubePlaylists());
+  } catch (error) { next(error); }
+});
+
+router.post("/youtube-playlists/search", async (req, res, next) => {
+  try {
+    const term = cleanText(req.body?.query, 200);
+    if (term.length < 2) return res.status(400).json({ error: "Enter a search term or YouTube playlist URL" });
+    res.json({ items: await searchYouTubePlaylists(term, 8) });
+  } catch (error) { next(error); }
+});
+
+router.post("/youtube-playlists", async (req, res, next) => {
+  try {
+    const playlistInput = cleanText(req.body?.playlistId || req.body?.playlistUrl, 600);
+    if (!playlistInput) return res.status(400).json({ error: "Choose a YouTube playlist first" });
+    const result = await saveAdminPlaylistAssignment({
+      playlistInput,
+      studentIds: req.body?.studentIds,
+      assignToAll: Boolean(req.body?.assignToAll),
+      reason: req.body?.reason,
+      tags: req.body?.tags,
+      status: req.body?.status,
+      adminId: req.user.id,
+    });
+    res.status(201).json({
+      playlist: result.playlist,
+      assignedCount: result.assignedCount,
+      message: result.assignedCount
+        ? `Playlist suggested to ${result.assignedCount} student${result.assignedCount === 1 ? "" : "s"}`
+        : "Playlist saved to the CareerCube learning library",
+    });
   } catch (error) { next(error); }
 });
 

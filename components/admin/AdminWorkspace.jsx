@@ -42,13 +42,13 @@ import {
   UserCog,
   Users,
   X,
+  Youtube,
   Zap,
 } from "lucide-react";
 import DashboardShell from "../DashboardShell";
 import Toast from "../Toast";
 import AdminApplications from "./AdminApplications";
 import AdminCommunity from "./AdminCommunity";
-import { resources as seedResources } from "../../lib/mockData";
 import { apiRequest } from "../../lib/api";
 
 const navItems = [
@@ -414,7 +414,6 @@ export default function AdminWorkspace() {
   const addLabel = {
     assessments: "New assessment",
     questions: "Add question",
-    resources: "Add resource",
     events: "Create event",
     jobs: "Add job",
   }[active];
@@ -434,7 +433,7 @@ export default function AdminWorkspace() {
         {active === "users" && <UsersPage users={users} loading={usersLoading} error={usersError} onRetry={loadUsers} onStatus={changeUserStatus} />}
         {active === "assessments" && <AssessmentAdmin records={assessmentRecords} loading={contentLoading} error={contentError} onRetry={loadAssessmentContent} onEdit={(record) => setModal({ type: "edit", entity: "assessments", record })} onDelete={(record) => deleteAssessmentContent("assessments", record)} />}
         {active === "questions" && <QuestionsAdmin records={questionRecords} loading={contentLoading} error={contentError} onRetry={loadAssessmentContent} onEdit={(record) => setModal({ type: "edit", entity: "questions", record })} onDelete={(record) => deleteAssessmentContent("questions", record)} />}
-        {active === "resources" && <ResourcesAdmin notify={notify} />}
+        {active === "resources" && <ResourcesAdmin notify={notify} users={users} />}
         {active === "events" && <EventsAdmin records={eventRecords} loading={eventsLoading} error={eventsError} onRetry={loadEvents} onEdit={(record) => setModal({ type: "edit", entity: "events", record })} onStatus={changeEventStatus} onDelete={deleteEvent} />}
         {active === "jobs" && <JobsAdmin records={jobRecords} loading={jobsLoading} error={jobsError} onRetry={loadJobs} onEdit={(record) => setModal({ type: "edit", entity: "jobs", record })} onStatus={changeJobStatus} onDelete={deleteJob} />}
         {active === "community" && <AdminCommunity data={communityData} setData={setCommunityData} loading={communityLoading} error={communityError} onRetry={loadCommunity} onModerate={moderateCommunityPost} notify={notify} />}
@@ -760,8 +759,89 @@ function ContentStatus({ value }) {
   return <span className={`rounded-full px-2 py-1 text-[10px] font-bold capitalize ${tone}`}>{label}</span>;
 }
 
-function ResourcesAdmin({ notify }) {
-  return <DataGrid title="68 learning resources" subtitle="9.8k downloads this month" columns={["Resource", "Category", "Level", "Format", "Downloads", "Completion", "Status", ""]} rows={seedResources.map((item, index) => [item.title, item.category, item.level, item.category.includes("PDF") ? "PDF" : "Course", 320 + index * 114, `${34 + index * 7}%`, index === 5 ? "Draft" : "Published"])} notify={notify} />;
+function ResourcesAdmin({ notify, users }) {
+  const [library, setLibrary] = useState({ configured: false, playlists: [] });
+  const [libraryLoading, setLibraryLoading] = useState(true);
+  const [libraryError, setLibraryError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [audience, setAudience] = useState("");
+  const [reason, setReason] = useState("");
+  const [tags, setTags] = useState("");
+  const [saving, setSaving] = useState(false);
+  const students = users.filter((user) => user.role === "student" && user.status === "active");
+
+  const loadLibrary = async () => {
+    setLibraryLoading(true);
+    setLibraryError("");
+    try {
+      const result = await apiRequest("/admin/youtube-playlists");
+      setLibrary({ configured: Boolean(result.configured), playlists: Array.isArray(result.playlists) ? result.playlists : [] });
+    } catch (error) {
+      setLibraryError(error.message);
+    } finally {
+      setLibraryLoading(false);
+    }
+  };
+
+  useEffect(() => { loadLibrary(); }, []);
+
+  const searchPlaylists = async (event) => {
+    event?.preventDefault();
+    if (searchTerm.trim().length < 2) return notify("Enter a topic or paste a YouTube playlist URL.");
+    setSearching(true);
+    try {
+      const result = await apiRequest("/admin/youtube-playlists/search", { method: "POST", body: JSON.stringify({ query: searchTerm }) });
+      const items = Array.isArray(result.items) ? result.items : [];
+      setSearchResults(items);
+      setSelectedPlaylist(items[0] || null);
+      if (!items.length) notify("No public YouTube playlists matched that search.");
+    } catch (error) {
+      notify(error.message);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const suggestPlaylist = async () => {
+    if (!selectedPlaylist) return notify("Choose a YouTube playlist first.");
+    if (!audience) return notify("Choose a student or all active students.");
+    setSaving(true);
+    try {
+      const result = await apiRequest("/admin/youtube-playlists", {
+        method: "POST",
+        body: JSON.stringify({
+          playlistId: selectedPlaylist.youtubePlaylistId,
+          assignToAll: audience === "all",
+          studentIds: audience !== "all" ? [Number(audience)] : [],
+          reason,
+          tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+          status: "published",
+        }),
+      });
+      notify(result.message);
+      setReason("");
+      setTags("");
+      setAudience("");
+      await loadLibrary();
+    } catch (error) {
+      notify(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return <div className="space-y-5">
+    <section className="panel overflow-hidden p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><span className="eyebrow"><Youtube size={13} /> YouTube playlists</span><h2 className="mt-2 text-lg font-extrabold">Suggest a real playlist to students</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-muted">Search YouTube or paste a public playlist URL, choose who should receive it, then save the recommendation.</p></div><span className={`tag ${library.configured ? "!bg-jade/10 !text-jade" : "!bg-coral/10 !text-coral"}`}>{library.configured ? "YouTube API connected" : "YouTube API not connected"}</span></div>
+      <form onSubmit={searchPlaylists} className="mt-5 flex flex-col gap-3 sm:flex-row"><label className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} /><input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="input pl-11" placeholder="e.g. SQL for data analysis, or paste a playlist URL" /></label><button disabled={searching} className="btn-primary min-h-11 disabled:opacity-50"><Search size={15} /> {searching ? "Searching..." : "Search YouTube"}</button></form>
+      {searchResults.length > 0 && <div className="mt-5 grid gap-3 lg:grid-cols-2">{searchResults.map((playlist) => <button type="button" onClick={() => setSelectedPlaylist(playlist)} key={playlist.youtubePlaylistId} className={`flex min-w-0 gap-3 rounded-2xl border p-3 text-left transition ${selectedPlaylist?.youtubePlaylistId === playlist.youtubePlaylistId ? "border-cobalt bg-cobalt/5" : "border-ink/[0.08] bg-white/45 hover:bg-white/70 dark:bg-white/[0.03]"}`}><span className="grid h-16 w-24 shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/[0.06]">{playlist.thumbnailUrl ? <img src={playlist.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <Youtube className="text-coral" size={25} />}</span><span className="min-w-0 flex-1"><b className="line-clamp-2 block text-xs leading-5">{playlist.title}</b><small className="mt-1 block truncate text-[10px] text-muted">{playlist.channelTitle || "YouTube"}</small><small className="mt-1 block text-[10px] text-cobalt">{selectedPlaylist?.youtubePlaylistId === playlist.youtubePlaylistId ? "Selected" : "Select playlist"}</small></span></button>)}</div>}
+      {selectedPlaylist && <div className="mt-5 rounded-[22px] border border-cobalt/15 bg-cobalt/[0.035] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-cobalt">Selected playlist</p><h3 className="mt-1 text-sm font-extrabold">{selectedPlaylist.title}</h3><p className="mt-1 text-xs text-muted">{selectedPlaylist.channelTitle || "YouTube"}</p></div><a className="btn-secondary min-h-9 text-xs" href={selectedPlaylist.playlistUrl} target="_blank" rel="noreferrer"><Eye size={14} /> Preview</a></div><div className="mt-4 grid gap-3 md:grid-cols-2"><label><span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-[.1em] text-muted">Suggest to</span><select value={audience} onChange={(event) => setAudience(event.target.value)} className="select"><option value="">Choose student</option><option value="all">All active students ({students.length})</option>{students.map((student) => <option value={student.id} key={student.id}>{student.name} · {student.email}</option>)}</select></label><label><span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-[.1em] text-muted">Skill tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} className="input" placeholder="SQL, analytics, beginner" /></label></div><label className="mt-3 block"><span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-[.1em] text-muted">Why this helps</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} className="input min-h-20 resize-none py-3" placeholder="e.g. Builds the SQL foundation needed for your data analyst goal." /></label><div className="mt-4 flex justify-end"><button disabled={saving} onClick={suggestPlaylist} type="button" className="btn-accent min-h-10 disabled:opacity-50"><Send size={15} /> {saving ? "Sending..." : "Save & suggest playlist"}</button></div></div>}
+    </section>
+    <section className="panel p-5"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-extrabold">Playlist library</h2><p className="text-xs text-muted">{library.playlists.length} stored playlist{library.playlists.length === 1 ? "" : "s"} · assignment and completion data is live</p></div><button onClick={loadLibrary} className="btn-secondary min-h-9"><RefreshCw size={14} /> Refresh</button></div>{libraryLoading ? <div className="grid min-h-40 place-items-center"><RefreshCw className="animate-spin text-cobalt" size={24} /></div> : libraryError ? <div className="rounded-2xl bg-coral/10 p-4 text-xs text-coral"><b className="block">Could not load the playlist library</b><p className="mt-1">{libraryError}</p></div> : !library.playlists.length ? <div className="py-10 text-center"><Youtube className="mx-auto text-muted" size={30} /><h3 className="mt-3 text-sm font-extrabold">No playlists saved yet</h3><p className="mt-1 text-xs text-muted">Search for a public YouTube playlist above and suggest it to a student.</p></div> : <div className="table-shell overflow-x-auto"><table className="w-full min-w-[800px] text-left text-xs"><thead className="border-b border-ink/[0.07] bg-ink/[0.035] text-[10px] uppercase tracking-[.09em] text-muted"><tr>{["Playlist", "Source", "Suggested", "Saved", "Completed"].map((heading) => <th className="px-4 py-3" key={heading}>{heading}</th>)}</tr></thead><tbody className="divide-y divide-ink/[0.06]">{library.playlists.map((playlist) => <tr key={playlist.id} className="hover:bg-white/55 dark:hover:bg-white/[0.03]"><td className="max-w-[440px] px-4 py-4"><div className="flex items-center gap-3"><span className="grid h-10 w-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-ink/[0.06]">{playlist.thumbnail_url ? <img src={playlist.thumbnail_url} alt="" className="h-full w-full object-cover" /> : <Youtube className="text-coral" size={18} />}</span><span className="min-w-0"><b className="line-clamp-1 block">{playlist.title}</b><small className="mt-1 block truncate text-muted">{playlist.channel_title || "YouTube"}</small></span></div></td><td className="px-4 py-4"><span className={`tag ${playlist.source === "admin" ? "!bg-plum/10 !text-plum" : "!bg-cobalt/10 !text-cobalt"}`}>{playlist.source === "admin" ? "Admin curated" : "Auto discovery"}</span></td><td className="px-4 py-4 font-extrabold text-cobalt">{playlist.assignment_count}</td><td className="px-4 py-4 font-extrabold text-jade">{playlist.saved_count}</td><td className="px-4 py-4 font-extrabold text-plum">{playlist.completed_count}</td></tr>)}</tbody></table></div>}</section>
+  </div>;
 }
 
 function EventsAdmin({ records, loading, error, onRetry, onEdit, onStatus, onDelete }) {
