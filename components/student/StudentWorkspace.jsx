@@ -1898,7 +1898,7 @@ function LearningPage({ notify }) {
         })}</div>}
         {!loading && !error && playlists.length === 0 && <div className={`mt-5 rounded-2xl p-5 text-center ${playlistConnectionError ? "bg-coral/10 text-coral" : "bg-ink/[0.035]"}`}><Youtube className={`mx-auto ${playlistConnectionError ? "text-coral" : "text-cobalt"}`} size={28} /><h3 className="mt-3 text-sm font-extrabold">{emptyPlaylistHeading}</h3><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-muted">{emptyPlaylistMessage}</p>{playlistConnectionError && <button onClick={() => onRetry()} className="mt-3 text-xs font-extrabold underline">Try again</button>}</div>}
       </section>}
-      <div className="flex flex-wrap gap-2">{["All resources", "Career Toolkit", "Data & Analytics", "Development", "Communication"].map((item) => <button key={item} onClick={() => setCategory(item)} className={`min-h-9 rounded-xl px-3 text-xs font-bold ${category === item ? "bg-ink text-white" : "bg-white/60 text-muted"}`}>{item}</button>)}</div>
+      {false && <><div className="flex flex-wrap gap-2">{["All resources", "Career Toolkit", "Data & Analytics", "Development", "Communication"].map((item) => <button key={item} onClick={() => setCategory(item)} className={`min-h-9 rounded-xl px-3 text-xs font-bold ${category === item ? "bg-ink text-white" : "bg-white/60 text-muted"}`}>{item}</button>)}</div>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((resource) => (
           <article className="panel overflow-hidden" key={resource.id}>
@@ -1906,7 +1906,7 @@ function LearningPage({ notify }) {
             <div className="p-5"><p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-coral">{resource.category}</p><h3 className="mt-2 text-base font-extrabold">{resource.title}</h3><div className="mt-3 flex gap-3 text-[11px] text-muted"><span>{resource.level}</span><span>·</span><span>{resource.time}</span></div>{resource.progress > 0 && <div className="mt-4"><div className="mb-1.5 flex justify-between text-[10px] font-bold text-muted"><span>Progress</span><span>{resource.progress}%</span></div><div className="progress-track"><div className="h-full rounded-full bg-jade" style={{ width: `${resource.progress}%` }} /></div></div>}<button onClick={() => notify(resource.category.includes("PDF") ? "Resource downloaded." : "Learning resource opened.")} className="btn-secondary mt-5 w-full">{resource.category.includes("PDF") ? <><Download size={15} /> Download resource</> : <><Play size={15} /> {resource.progress ? "Continue" : "Start learning"}</>}</button></div>
           </article>
         ))}
-      </section>
+      </section></>}
     </div>
   );
 }
