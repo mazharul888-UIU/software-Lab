@@ -1846,21 +1846,6 @@ function LearningPage({ notify }) {
     setSkillQuery(skill);
     searchSkillResources(null, skill);
   };
-  const playlistConnectionError = Boolean(source.errorMessage) || !["ready", "cached", "no_results", "profile_incomplete", "not_configured"].includes(source.status);
-  const emptyPlaylistHeading = source.profileReady === false
-    ? "Add a skill to unlock playlist matches"
-    : source.configured === false
-      ? "YouTube suggestions are being connected"
-      : playlistConnectionError
-        ? "YouTube playlists need attention"
-        : "No playlists match yet";
-  const emptyPlaylistMessage = source.profileReady === false
-    ? "Add your target role, career interests or skills in Profile & settings. An admin can still send you a playlist directly."
-    : source.configured === false
-      ? "Your admin can add a curated playlist now, and automatic matches will appear once the YouTube connection is available."
-      : playlistConnectionError
-        ? source.errorMessage || "YouTube could not be reached. Please refresh, or ask an administrator to check the connection."
-        : "Refresh after updating your profile, or ask an administrator for a curated learning playlist.";
   return (
     <div className="space-y-5">
       <section className="panel grid overflow-hidden md:grid-cols-[1fr_.6fr]">
