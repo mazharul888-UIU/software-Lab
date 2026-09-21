@@ -5,11 +5,15 @@ const { ensureAdaptiveAssessmentSchema } = require("../services/adaptive-assessm
 const { ensureJobSchema } = require("../services/job-schema");
 const { ensureProfileSchema } = require("../services/profile-schema");
 const { ensureMatchingSchema } = require("../services/matching-schema");
+const { ensureResumeSchema } = require("../services/resume-schema");
 const { MAX_LEVEL } = require("../services/gemini-assessment");
+const { parseStoredResume } = require("../services/resume-profile");
+const { generateCareerSkillPlan } = require("../services/student-career-plan");
 const {
   average,
   calculateProfileCompletion,
   calculateReadiness,
+  calculateResumeCompletion,
   clampPercentage,
 } = require("../services/student-overview");
 
@@ -29,6 +33,7 @@ router.get("/overview", async (req, res, next) => {
       ensureMatchingSchema(),
       ensureAdaptiveAssessmentSchema(),
       ensureJobSchema(),
+      ensureResumeSchema(),
     ]);
 
     const [
@@ -40,6 +45,7 @@ router.get("/overview", async (req, res, next) => {
       jobRows,
       learningRows,
       skillRows,
+      resumeRows,
     ] = await Promise.all([
       query(
         `SELECT u.name, u.email, p.university, p.degree, p.graduation_year,
@@ -101,9 +107,17 @@ router.get("/overview", async (req, res, next) => {
          WHERE us.user_id=? ORDER BY s.name`,
         [req.user.id],
       ),
+      query(
+        `SELECT resume_data FROM student_resumes WHERE user_id=? LIMIT 1`,
+        [req.user.id],
+      ),
     ]);
 
     const profile = { ...(profileRows[0] || {}), skills: skillRows.map((skill) => skill.name) };
+    const resume = parseStoredResume(resumeRows[0]?.resume_data, profile);
+    const resumeCompletion = resumeRows[0]
+      ? calculateResumeCompletion(resume)
+      : { percentage: 0, completedSections: 0, totalSections: 10 };
     const program = programRows[0] || {};
     const applicationStats = applicationRows[0] || {};
     const jobStats = jobRows[0] || {};
@@ -122,6 +136,7 @@ router.get("/overview", async (req, res, next) => {
       assessmentPerformance,
       learningProgress,
     });
+    const careerSkillPlan = await generateCareerSkillPlan(profile);
 
     await query(
       "UPDATE student_profiles SET profile_completion=?, readiness_score=? WHERE user_id=?",
@@ -207,6 +222,7 @@ router.get("/overview", async (req, res, next) => {
         assessmentPerformance,
         learningProgress,
         weights: { profile: 35, assessments: 45, learning: 20 },
+        resumeCompletion: resumeCompletion.percentage,
       },
       metrics: {
         assessmentsPublished: assessmentRows.length,
@@ -217,9 +233,16 @@ router.get("/overview", async (req, res, next) => {
         learningResources: Number(learningStats.available_count || 0),
         resourcesStarted: Number(learningStats.started_count || 0),
         resourcesCompleted: Number(learningStats.completed_count || 0),
+        adaptiveLevel: Number(program.current_level || 1),
+        adaptiveHighestLevel: Number(program.highest_level_completed || 0),
+        adaptiveMaxLevel: MAX_LEVEL,
+        assessmentScore: assessmentPerformance,
+        resumeSectionsCompleted: resumeCompletion.completedSections,
+        resumeSectionsTotal: resumeCompletion.totalSections,
       },
       skillSignals,
       nextActions: nextActions.slice(0, 3),
+      careerSkillPlan,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) { next(error); }

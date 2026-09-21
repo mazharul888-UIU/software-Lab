@@ -1000,8 +1000,20 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
     );
   }
 
-  const { metrics, calculation, skillSignals, nextActions, readinessScore } = data;
+  const { metrics, calculation, skillSignals, nextActions, readinessScore, careerSkillPlan } = data;
   const strongestSignal = skillSignals[0];
+  const topJobs = [...availableJobs]
+    .sort((left, right) => Number(right.match_percentage ?? -1) - Number(left.match_percentage ?? -1))
+    .slice(0, 3);
+  const resumeCompletion = Number(calculation.resumeCompletion || 0);
+  const adaptiveLevel = Number(metrics.adaptiveLevel || 1);
+  const adaptiveMaxLevel = Number(metrics.adaptiveMaxLevel || 50);
+  const plan = careerSkillPlan || {
+    headline: "Build the next skill for your degree",
+    summary: "Complete your profile to unlock degree-aware Gemini recommendations.",
+    skills: [],
+    source: "degree-guidance",
+  };
   const progressSources = [
     ["Profile completion", calculation.profileCompletion, "bg-cobalt", "35% weight"],
     ["Assessment performance", calculation.assessmentPerformance, "bg-jade", "45% weight"],
@@ -1010,11 +1022,37 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Metric icon={Target} label="Readiness score" value={`${readinessScore}%`} delta="Calculated from saved activity" tone="bg-cobalt" />
-        <Metric icon={ListChecks} label="Assessments completed" value={metrics.assessmentsCompleted} delta={`${metrics.assessmentsPublished} currently published`} tone="bg-jade" />
-        <Metric icon={BriefcaseBusiness} label="Active applications" value={metrics.applicationsActive} delta={`${metrics.availableJobs} live jobs available`} tone="bg-coral" />
-        <Metric icon={BookOpen} label="Learning progress" value={`${calculation.learningProgress}%`} delta={`${metrics.resourcesStarted} started · ${metrics.resourcesCompleted} completed`} tone="bg-plum" />
+        <Metric icon={ListChecks} label="Assessment level" value={`Level ${adaptiveLevel}`} delta={`${metrics.assessmentScore || 0}% best score · ${adaptiveMaxLevel} levels`} tone="bg-jade" />
+        <Metric icon={FileText} label="CV built" value={`${resumeCompletion}%`} delta={`${metrics.resumeSectionsCompleted || 0}/${metrics.resumeSectionsTotal || 10} sections complete`} tone="bg-coral" />
+        <Metric icon={UserRound} label="Profile completion" value={`${calculation.profileCompletion}%`} delta={`${Math.max(0, 100 - calculation.profileCompletion)}% remaining`} tone="bg-plum" />
+        <Metric icon={BriefcaseBusiness} label="Top live matches" value={topJobs.length} delta={`${metrics.availableJobs} live jobs available`} tone="bg-cobalt" />
+      </section>
+
+      <section className="panel overflow-hidden p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <span className="eyebrow"><Zap size={13} /> Degree-aware Gemini career guide</span>
+            <h2 className="mt-2 text-xl font-extrabold tracking-[-0.035em]">{plan.headline}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">{plan.summary}</p>
+          </div>
+          <span className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold ${plan.source === "gemini" ? "bg-cobalt/10 text-cobalt" : "bg-ink/[0.06] text-muted"}`}>
+            {plan.source === "gemini" ? "Gemini generated" : "Degree-based guidance"}
+          </span>
+        </div>
+        {plan.skills?.length > 0 ? (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {plan.skills.map((skill) => (
+              <div key={skill.name} className="rounded-2xl border border-ink/[0.07] bg-white/55 p-4">
+                <b className="block text-sm">{skill.name}</b>
+                <p className="mt-2 text-xs leading-5 text-muted">{skill.reason}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-5 rounded-2xl border border-dashed border-ink/15 p-4 text-xs text-muted">Add your degree, target role and interests in Profile & settings to generate a focused skill plan.</p>
+        )}
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
@@ -1088,15 +1126,15 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.3fr_.7fr]">
+      <section className="space-y-5">
         <div className="panel p-6">
           <div className="mb-5 flex items-center justify-between">
-            <div><h2 className="text-lg font-extrabold tracking-[-0.03em]">Latest live opportunities</h2><p className="text-xs text-muted">Published by administrators and still accepting applications</p></div>
+            <div><h2 className="text-lg font-extrabold tracking-[-0.03em]">Top 3 live opportunities</h2><p className="text-xs text-muted">Ranked by your AI match score and refreshed from live listings</p></div>
             <button onClick={() => onNavigate("jobs")} className="btn-ghost">View all <ArrowRight size={15} /></button>
           </div>
-          <div className="grid gap-3 lg:grid-cols-2">
-            {availableJobs.slice(0, 2).map((job) => <CompactJob key={job.id} job={job} onClick={() => onOpenJob(job)} />)}
-            {!availableJobs.length && <div className="rounded-2xl border border-dashed border-ink/15 p-5 text-center text-xs text-muted">No administrator-published jobs are available yet.</div>}
+          <div className="grid gap-3 md:grid-cols-3">
+            {topJobs.map((job) => <CompactJob key={job.id} job={job} onClick={() => onOpenJob(job)} />)}
+            {!topJobs.length && <div className="rounded-2xl border border-dashed border-ink/15 p-5 text-center text-xs text-muted md:col-span-3">No live opportunities match your profile yet.</div>}
           </div>
         </div>
 

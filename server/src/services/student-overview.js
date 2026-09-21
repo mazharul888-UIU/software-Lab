@@ -50,10 +50,35 @@ function average(values = []) {
   return Math.round(numbers.reduce((sum, value) => sum + value, 0) / numbers.length);
 }
 
+function calculateResumeCompletion(resume = {}) {
+  const fields = [
+    resume.name,
+    resume.title,
+    resume.email,
+    resume.phone,
+    resume.location,
+    resume.summary,
+    resume.skills,
+    Array.isArray(resume.education) && resume.education.length,
+    Array.isArray(resume.experiences) && resume.experiences.length,
+    Array.isArray(resume.projects) && resume.projects.length,
+  ];
+  const completedSections = fields.filter((value) => {
+    if (typeof value === "number") return value > 0;
+    return value !== null && value !== undefined && String(value).trim() !== "";
+  }).length;
+  return {
+    percentage: Math.round((completedSections / fields.length) * 100),
+    completedSections,
+    totalSections: fields.length,
+  };
+}
+
 module.exports = {
   average,
   calculateProfileCompletion,
   calculateReadiness,
+  calculateResumeCompletion,
   clampPercentage,
   parseCareerInterests,
 };
