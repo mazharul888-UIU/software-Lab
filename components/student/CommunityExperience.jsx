@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -179,8 +179,25 @@ function PostCard({ post, viewer, onOpenProfile, onUpdate, onRemove, notify }) {
   const [commentSaving, setCommentSaving] = useState(false);
   const [busyAction, setBusyAction] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const tags = jsonList(post.tags);
   const awaitingReview = post.status === "pending_review";
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const closeMenu = (event) => {
+      if (!menuRef.current?.contains(event.target)) setMenuOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", closeMenu);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeMenu);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
 
   const loadComments = async () => {
     setCommentsLoading(true);
@@ -296,7 +313,7 @@ function PostCard({ post, viewer, onOpenProfile, onUpdate, onRemove, notify }) {
           <small className="block truncate text-[11px] text-muted">{post.university || (post.author_role === "admin" ? "Platform team" : "CareerCube student")} · {timeAgo(post.created_at)}</small>
           </span>
         </button>
-        <div className="relative">
+        <div ref={menuRef} className="relative">
           <button onClick={() => setMenuOpen((current) => !current)} className="btn-ghost min-h-8 px-2" aria-label="Post actions">•••</button>
           {menuOpen && (
             <div className="absolute right-0 top-10 z-20 w-44 rounded-2xl border border-ink/10 bg-[#FBF9F4] p-2 shadow-lift dark:bg-[#0A0A0A]">

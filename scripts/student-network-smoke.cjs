@@ -30,8 +30,13 @@ assert.match(ui, /\/network\/conversations\//, "The inbox UI must load live conv
 assert.match(ui, /onDecline/, "Incoming connection requests in search results must support declining");
 assert.match(ui, /Clear history/, "The inbox UI must provide a clear-history action");
 assert.match(ui, /deleteMessage/, "The inbox UI must provide per-message deletion");
+assert.match(ui, /const handleDraftKeyDown/, "The inbox must handle the Enter key in its message composer");
+assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey/, "Enter should send while Shift+Enter keeps a line break");
+assert.match(ui, /onKeyDown=\{handleDraftKeyDown\}/, "The message composer must use the Enter-key handler");
 assert.match(ui, /left !== null/, "Unconnected students must not be treated as a busy connection action");
 assert.match(ui, /connection-profile/, "Selecting a connection must expose its compact profile preview");
+assert.match(ui, /function ConnectionProfileModal/, "Connection profiles must open in a popup");
+assert.match(ui, /<div className="modal-backdrop" onClick=\{onClose\}/, "Clicking outside a connection profile must close it");
 assert.match(workspace, /id: "connections", label: "Connections & inbox"/, "The student workspace needs an inbox section");
 assert.match(shell, /Search students by name or ID/, "The top bar must support student search");
 
