@@ -65,11 +65,19 @@ app.use("/api/network", studentNetworkRoutes);
 app.use("/api/resume", resumeRoutes);
 
 app.use((_req, res) => res.status(404).json({ error: "Route not found" }));
-app.use((error, _req, res, _next) => {
-  console.error(error);
+app.use((error, req, res, _next) => {
   const status = Number(error.statusCode) || (error.code === "ER_DUP_ENTRY" ? 409 : 500);
+  console.error("API request failed", {
+    method: req.method,
+    path: req.originalUrl,
+    status,
+    code: error.code || null,
+    message: error.message,
+  });
   const message = error.code === "ER_DUP_ENTRY"
     ? "This record already exists"
+    : error.code === "delivery_error"
+      ? "We could not send the verification code. Please try again later."
     : status >= 500
       ? "Unexpected server error"
       : error.message;

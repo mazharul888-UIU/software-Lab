@@ -131,46 +131,6 @@ async function syncProfileSkills(connection, userId, profileSkills) {
   }
 }
 
-async function createStudentAccount({ name, email, passwordHash, university, settings, clearPendingRegistration = false }) {
-  let connection;
-  try {
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-    const [existingRows] = await connection.execute(
-      "SELECT id FROM users WHERE email=? LIMIT 1 FOR UPDATE",
-      [email],
-    );
-    if (existingRows.length) {
-      const error = new Error("An account already exists for this email");
-      error.statusCode = 409;
-      throw error;
-    }
-    const [result] = await connection.execute(
-      "INSERT INTO users (name, email, password_hash, role, status) VALUES (?, ?, ?, 'student', 'active')",
-      [name, email, passwordHash],
-    );
-    await connection.execute(
-      "INSERT INTO student_profiles (user_id, university, readiness_score) VALUES (?, ?, 0)",
-      [result.insertId, university || null],
-    );
-    if (clearPendingRegistration) {
-      await connection.execute("DELETE FROM pending_student_registrations WHERE email=?", [email]);
-    }
-    await connection.commit();
-
-    const user = { id: result.insertId, name, email, role: "student" };
-    return {
-      token: jwt.sign(user, JWT_SECRET, { expiresIn: `${settings.security.sessionHours}h` }),
-      user,
-    };
-  } catch (error) {
-    try { await connection?.rollback(); } catch {}
-    throw error;
-  } finally {
-    connection?.release();
-  }
-}
-
 router.post("/register", registrationEmailLimiter, async (req, res, next) => {
   try {
     const settings = await getPlatformSettings();
@@ -237,31 +197,11 @@ router.post("/register", registrationEmailLimiter, async (req, res, next) => {
         code: error?.code || "delivery_error",
         statusCode: error?.statusCode || null,
       });
-      if (Number(error?.statusCode) < 500) {
-        await query(
-          "DELETE FROM pending_student_registrations WHERE email=? AND code_hash=?",
-          [normalizedEmail, codeHash],
-        ).catch(() => {});
-        throw error;
-      }
-
-      const account = await createStudentAccount({
-        name: name.trim(),
-        email: normalizedEmail,
-        passwordHash,
-        university: safeUniversity,
-        settings,
-        clearPendingRegistration: true,
-      });
-      console.warn("Student signup completed without email verification after delivery failure", {
-        userId: account.user.id,
-      });
-      return res.status(201).json({
-        message: "Your student account is ready. Email verification is temporarily unavailable.",
-        verificationRequired: false,
-        deliveryFallback: true,
-        ...account,
-      });
+      await query(
+        "DELETE FROM pending_student_registrations WHERE email=? AND code_hash=?",
+        [normalizedEmail, codeHash],
+      ).catch(() => {});
+      throw error;
     }
 
     res.status(202).json({
