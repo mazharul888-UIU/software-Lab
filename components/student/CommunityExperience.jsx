@@ -14,6 +14,7 @@ import {
   Share2,
   ShieldCheck,
   Trash2,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -80,7 +81,97 @@ function EmptyFeed({ onNewPost, canPost, disabledReason }) {
   );
 }
 
-function PostCard({ post, viewer, onUpdate, onRemove, notify }) {
+function CommunityMemberProfile({ post, viewer, onClose, onOpenConnections, notify }) {
+  const [student, setStudent] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [savingConnection, setSavingConnection] = useState(false);
+  const isStudent = post?.author_role === "student";
+  const isOwnProfile = Number(post?.user_id) === Number(viewer?.id);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!post) return undefined;
+    if (!isStudent || isOwnProfile) {
+      setStudent({ ...post, student_id: Number(post.user_id), connection_status: isOwnProfile ? "self" : null });
+      setLoading(false);
+      setError("");
+      return undefined;
+    }
+
+    const loadProfile = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const matches = await apiRequest(`/network/students?q=${encodeURIComponent(post.user_id)}`);
+        const matchedStudent = Array.isArray(matches)
+          ? matches.find((item) => Number(item.student_id) === Number(post.user_id))
+          : null;
+        if (!matchedStudent) throw new Error("This student profile is no longer available.");
+        if (!cancelled) setStudent(matchedStudent);
+      } catch (requestError) {
+        if (!cancelled) setError(requestError.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadProfile();
+    return () => { cancelled = true; };
+  }, [isOwnProfile, isStudent, post]);
+
+  const sendConnectionRequest = async () => {
+    if (!student?.student_id || savingConnection) return;
+    setSavingConnection(true);
+    try {
+      const result = await apiRequest("/network/connections", {
+        method: "POST",
+        body: JSON.stringify({ studentId: student.student_id }),
+      });
+      notify(result.message);
+      onOpenConnections(student);
+    } catch (requestError) {
+      notify(requestError.message);
+    } finally {
+      setSavingConnection(false);
+    }
+  };
+
+  const status = student?.connection_status;
+  return (
+    <div className="modal-backdrop" onClick={onClose} role="presentation">
+      <section className="modal-card max-w-md" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="community-member-profile-title">
+        <div className="flex items-start justify-between gap-4">
+          <span className={`grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl text-sm font-extrabold text-white ${authorTone(post.author_role, post.user_id)}`}>
+            {student?.avatar || student?.avatar_url ? <img src={student.avatar || student.avatar_url} alt="" className="h-full w-full object-cover" /> : initials(post.author)}
+          </span>
+          <button onClick={onClose} className="btn-ghost min-h-9 px-2" aria-label="Close profile"><X size={18} /></button>
+        </div>
+        <div className="mt-4">
+          <h2 id="community-member-profile-title" className="text-xl font-extrabold">{post.author}</h2>
+          <p className="mt-1 text-sm text-muted">{post.author_role === "admin" ? "CareerCube administrator" : "CareerCube student"}</p>
+        </div>
+
+        {loading && <p className="mt-8 flex items-center gap-2 text-sm text-muted"><LoaderCircle size={16} className="animate-spin" /> Loading student profile...</p>}
+        {error && <p className="mt-5 rounded-xl bg-coral/10 p-3 text-xs font-bold text-coral">{error}</p>}
+        {!loading && !error && student && <>
+          <div className="mt-5 grid gap-3 rounded-2xl bg-ink/[0.035] p-4 text-sm dark:bg-white/[0.04]">
+            {isStudent && <p><b>Student ID:</b> <span className="text-muted">{student.student_id}</span></p>}
+            <p><b>University:</b> <span className="text-muted">{student.university || "Not shared"}</span></p>
+            <p><b>Degree:</b> <span className="text-muted">{student.degree || "Not shared"}</span></p>
+          </div>
+          {isStudent && !isOwnProfile && <div className="mt-6 flex justify-end gap-2">
+            {status === "none" && <button disabled={savingConnection} onClick={sendConnectionRequest} className="btn-accent disabled:opacity-45">{savingConnection ? <LoaderCircle size={15} className="animate-spin" /> : <UserPlus size={15} />} Add</button>}
+            {(status === "outgoing" || status === "incoming") && <button onClick={() => onOpenConnections(student)} className="btn-secondary">Open Connections &amp; Inbox</button>}
+            {status === "connected" && <span className="tag !bg-jade/10 !text-jade">Connected</span>}
+          </div>}
+        </>}
+      </section>
+    </div>
+  );
+}
+
+function PostCard({ post, viewer, onOpenProfile, onUpdate, onRemove, notify }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -195,14 +286,16 @@ function PostCard({ post, viewer, onUpdate, onRemove, notify }) {
   return (
     <article id={`community-post-${post.id}`} className="panel p-5 sm:p-6">
       <header className="flex items-start gap-3">
-        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-xs font-extrabold text-white ${authorTone(post.author_role, post.user_id)}`}>{initials(post.author)}</span>
-        <div className="min-w-0 flex-1">
+        <button onClick={() => onOpenProfile(post)} className="flex min-w-0 flex-1 items-start gap-3 text-left" aria-label={`Open ${post.author}'s profile`}>
+          <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-xs font-extrabold text-white ${authorTone(post.author_role, post.user_id)}`}>{initials(post.author)}</span>
+          <span className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <b className="text-sm">{post.author}</b>
             {post.author_role === "admin" && <span className="tag !bg-plum/10 !text-plum"><ShieldCheck size={11} /> CareerCube admin</span>}
           </div>
           <small className="block truncate text-[11px] text-muted">{post.university || (post.author_role === "admin" ? "Platform team" : "CareerCube student")} · {timeAgo(post.created_at)}</small>
-        </div>
+          </span>
+        </button>
         <div className="relative">
           <button onClick={() => setMenuOpen((current) => !current)} className="btn-ghost min-h-8 px-2" aria-label="Post actions">•••</button>
           {menuOpen && (
@@ -284,7 +377,8 @@ function PostCard({ post, viewer, onUpdate, onRemove, notify }) {
   );
 }
 
-export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify, viewer, onNewPost, postingStatus }) {
+export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify, viewer, onNewPost, onOpenConnections, postingStatus }) {
+  const [profilePost, setProfilePost] = useState(null);
   const stats = useMemo(() => posts.reduce((result, post) => ({
     likes: result.likes + Number(post.likes || 0),
     comments: result.comments + Number(post.comments || 0),
@@ -310,6 +404,7 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
             post={post}
             viewer={viewer}
             notify={notify}
+            onOpenProfile={setProfilePost}
             onUpdate={updatePost}
             onRemove={(id) => setPosts((current) => current.filter((item) => Number(item.id) !== Number(id)))}
           />
@@ -331,6 +426,7 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
           <div className="mt-5 flex items-center justify-between text-xs"><b>Real people. Safer conversations.</b><ArrowRight size={16} /></div>
         </div>
       </aside>
+      {profilePost && <CommunityMemberProfile post={profilePost} viewer={viewer} onClose={() => setProfilePost(null)} onOpenConnections={onOpenConnections} notify={notify} />}
     </div>
   );
 }
