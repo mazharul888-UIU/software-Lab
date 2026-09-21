@@ -192,6 +192,7 @@ async function sendWithGmail({ email, content }) {
       responseCode: providerError?.responseCode || null,
     });
     const error = new Error("Verification email could not be sent. Please try again shortly.");
+    error.code = "email_delivery_unavailable";
     error.statusCode = 503;
     throw error;
   }
@@ -225,6 +226,7 @@ async function sendWithResend({ email, code, content, purpose = "registration" }
       code: responseBody?.name || responseBody?.statusCode || "provider_error",
     });
     const error = new Error("Verification email could not be sent. Please try again shortly.");
+    error.code = "email_delivery_unavailable";
     error.statusCode = 503;
     throw error;
   }

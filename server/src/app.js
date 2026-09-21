@@ -76,8 +76,8 @@ app.use((error, req, res, _next) => {
   });
   const message = error.code === "ER_DUP_ENTRY"
     ? "This record already exists"
-    : error.code === "delivery_error"
-      ? "We could not send the verification code. Please try again later."
+    : error.code === "email_delivery_unavailable"
+      ? "We could not send the verification code right now. Please try again in a few minutes."
     : status >= 500
       ? "Unexpected server error"
       : error.message;
