@@ -1066,12 +1066,6 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
     skills: [],
     source: "degree-guidance",
   };
-  const progressSources = [
-    ["Profile completion", calculation.profileCompletion, "bg-cobalt", "35% weight"],
-    ["Assessment performance", calculation.assessmentPerformance, "bg-jade", "45% weight"],
-    ["Learning progress", calculation.learningProgress, "bg-plum", "20% weight"],
-  ];
-
   return (
     <div className="space-y-5">
       <section className="panel p-6">
@@ -1194,25 +1188,6 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
         </div>
       </section>
 
-      <section className="space-y-5">
-        <div className="panel p-6">
-          <div className="mb-5">
-            <h2 className="text-lg font-extrabold tracking-[-0.03em]">Readiness calculation</h2>
-            <p className="text-xs text-muted">Every value comes from your saved account data</p>
-          </div>
-          <div className="space-y-5">
-            {progressSources.map(([label, value, tone, weight]) => (
-              <div key={label}>
-                <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-                  <span><b>{label}</b><small className="ml-2 text-muted">{weight}</small></span>
-                  <b>{value}%</b>
-                </div>
-                <div className="progress-track"><div className={`h-full rounded-full ${tone}`} style={{ width: `${value}%` }} /></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
