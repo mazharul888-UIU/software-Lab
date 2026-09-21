@@ -3751,6 +3751,86 @@ html.applicant-cv-modal-open body {
   background: linear-gradient(145deg, #17181c 0%, #0e0f12 100%);
 }
 
+/* The degree-aware skill priorities follow the same accent sequence as the
+   dashboard metrics, so the guide feels like one coordinated system. */
+.career-skill-card {
+  position: relative;
+  min-height: 7.2rem;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 1.25rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.career-skill-card--cobalt {
+  border-color: rgba(49, 85, 198, 0.18);
+  background: linear-gradient(145deg, #f9fbff 0%, #edf4ff 100%);
+}
+
+.career-skill-card--jade {
+  border-color: rgba(78, 120, 100, 0.20);
+  background: linear-gradient(145deg, #fbfefc 0%, #edf8f1 100%);
+}
+
+.career-skill-card--coral {
+  border-color: rgba(200, 109, 80, 0.20);
+  background: linear-gradient(145deg, #fffaf8 0%, #fff0ea 100%);
+}
+
+.career-skill-card--plum {
+  border-color: rgba(121, 84, 109, 0.20);
+  background: linear-gradient(145deg, #fdfaff 0%, #f7eef8 100%);
+}
+
+.career-skill-card__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.8rem;
+  height: 1.3rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(30, 36, 48, 0.10);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.64);
+  color: #586174;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+@media (hover: hover) {
+  .career-skill-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 26px rgba(30, 36, 48, 0.11);
+  }
+}
+
+:root[data-theme="dark"] .career-skill-card--cobalt {
+  border-color: rgba(142, 166, 255, 0.24);
+  background: linear-gradient(145deg, #11192c 0%, #0d1323 100%);
+}
+
+:root[data-theme="dark"] .career-skill-card--jade {
+  border-color: rgba(118, 198, 164, 0.23);
+  background: linear-gradient(145deg, #10231d 0%, #0c1915 100%);
+}
+
+:root[data-theme="dark"] .career-skill-card--coral {
+  border-color: rgba(255, 159, 127, 0.23);
+  background: linear-gradient(145deg, #2a1715 0%, #1c100f 100%);
+}
+
+:root[data-theme="dark"] .career-skill-card--plum {
+  border-color: rgba(208, 163, 196, 0.22);
+  background: linear-gradient(145deg, #241625 0%, #181019 100%);
+}
+
+:root[data-theme="dark"] .career-skill-card__number {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.08);
+  color: #d7ddea;
+}
+
 @media (max-width: 640px) {
   .applicant-cv-backdrop {
     padding: 0.5rem;

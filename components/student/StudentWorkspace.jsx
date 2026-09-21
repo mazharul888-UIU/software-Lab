@@ -1079,8 +1079,9 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
         </div>
         {plan.skills?.length > 0 ? (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {plan.skills.map((skill) => (
-              <div key={skill.name} className="rounded-2xl border border-ink/[0.07] bg-white/55 p-4">
+            {plan.skills.map((skill, index) => (
+              <div key={skill.name} className={`career-skill-card career-skill-card--${["cobalt", "jade", "coral", "plum"][index % 4]} p-4`}>
+                <span className="career-skill-card__number">{String(index + 1).padStart(2, "0")}</span>
                 <b className="block text-sm">{skill.name}</b>
                 <p className="mt-2 text-xs leading-5 text-muted">{skill.reason}</p>
               </div>
