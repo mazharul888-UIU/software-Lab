@@ -91,6 +91,37 @@ function PersonResult({ student, onConnect, onAccept, onDecline, onCancel, onMes
   );
 }
 
+function ConnectionProfileModal({ student, onClose }) {
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose} role="presentation">
+      <section id="connection-profile" className="modal-card max-w-lg" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="connection-profile-title">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar student={student} size="h-14 w-14" />
+            <div className="min-w-0"><h2 id="connection-profile-title" className="truncate text-xl font-extrabold">{student.name}</h2><p className="mt-1 text-sm text-muted">{student.degree || student.target_role || "CareerCube student"}</p></div>
+          </div>
+          <button onClick={onClose} className="btn-ghost min-h-9 px-2" aria-label="Close profile"><X size={18} /></button>
+        </div>
+        <div className="mt-6 grid gap-3 rounded-2xl bg-cobalt/[0.045] p-4 text-sm dark:bg-white/[0.04] sm:grid-cols-2">
+          <p><b>University:</b> <span className="text-muted">{student.university || "Not shared"}</span></p>
+          <p><b>Location:</b> <span className="text-muted">{student.location || "Not shared"}</span></p>
+        </div>
+        {student.skills?.length > 0 && <div className="mt-5"><b className="text-sm">Skills</b><div className="mt-2 flex flex-wrap gap-1.5">{student.skills.map((skill) => <span className="tag !bg-cobalt/10 !text-cobalt" key={skill}>{skill}</span>)}</div></div>}
+        {!student.skills?.length && <p className="mt-5 text-sm text-muted">No skills shared yet.</p>}
+        {connectionSocialFields.some(({ key }) => student[key]) && <div className="mt-5"><b className="text-sm">Social links</b><ConnectionSocialLinks student={student} /></div>}
+      </section>
+    </div>
+  );
+}
+
 export default function ConnectionsPage({ search, setSearch, currentUser, notify }) {
   const [network, setNetwork] = useState({ connections: [], incomingRequests: [], unreadCount: 0 });
   const [networkLoading, setNetworkLoading] = useState(true);
@@ -293,6 +324,12 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
     }
   };
 
+  const handleDraftKeyDown = (event) => {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    sendMessage(event);
+  };
+
   const deleteMessage = async (message) => {
     if (!selectedConnection || !window.confirm("Delete this message for everyone?")) return;
     setDeletingMessageId(message.id);
@@ -364,7 +401,6 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
                 <button onClick={removeConnection} className="btn-ghost min-h-9 px-2 text-xs text-muted hover:text-coral">Remove</button>
               </div>
             </header>
-            {profileOpen && <section id="connection-profile" className="border-b border-ink/[0.07] bg-cobalt/[0.045] px-5 py-4 dark:bg-white/[0.025]" aria-label={`${selectedConnection.name}'s profile`}><div className="flex flex-wrap items-start gap-4"><Avatar student={selectedConnection} size="h-14 w-14" /><div className="min-w-[200px] flex-1"><h3 className="font-extrabold">{selectedConnection.name}</h3><p className="mt-0.5 text-xs text-muted">{selectedConnection.degree || selectedConnection.target_role || "CareerCube student"}</p><div className="mt-3 grid gap-2 text-xs text-muted sm:grid-cols-2"><p><b className="text-ink dark:text-white">University:</b> {selectedConnection.university || "Not shared"}</p><p><b className="text-ink dark:text-white">Location:</b> {selectedConnection.location || "Not shared"}</p></div>{selectedConnection.skills?.length > 0 && <div className="mt-3"><b className="text-xs">Skills</b><div className="mt-1.5 flex flex-wrap gap-1.5">{selectedConnection.skills.map((skill) => <span className="tag !bg-cobalt/10 !text-cobalt" key={skill}>{skill}</span>)}</div></div>}{!selectedConnection.skills?.length && <p className="mt-3 text-xs text-muted">No skills shared yet.</p>}{connectionSocialFields.some(({ key }) => selectedConnection[key]) && <div className="mt-3"><b className="text-xs">Social links</b><ConnectionSocialLinks student={selectedConnection} /></div>}</div></div></section>}
             <div className="clay-chat-well flex-1 space-y-3 overflow-y-auto bg-canvas/45 px-5 py-5">
               {messagesLoading && <p className="flex items-center justify-center gap-2 pt-12 text-xs text-muted"><LoaderCircle size={16} className="animate-spin" /> Loading conversation...</p>}
               {messageError && <div className="mx-auto max-w-md rounded-2xl bg-coral/10 p-4 text-center text-xs text-coral"><AlertTriangle className="mx-auto mb-2" size={17} />{messageError}<button onClick={() => loadMessages(selectedConnection.connection_id)} className="mt-2 block w-full font-extrabold underline">Try again</button></div>}
@@ -380,12 +416,13 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
               <div ref={messageEndRef} />
             </div>
             <form onSubmit={sendMessage} className="clay-chat-composer border-t border-ink/[0.07] bg-white/45 p-4 dark:bg-white/[0.025]">
-              <div className="flex items-end gap-3"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} className="input min-h-11 max-h-32 flex-1 resize-y py-2.5" maxLength={2000} placeholder={`Message ${selectedConnection.name.split(" ")[0]}...`} aria-label="Write a message" /><button disabled={!draft.trim() || sending} className="btn-accent min-h-11 px-4 disabled:opacity-45" aria-label="Send message">{sending ? <LoaderCircle className="animate-spin" size={16} /> : <Send size={16} />}</button></div>
-              <p className="mt-2 text-[10px] text-muted">Press Enter in this box to send a line break, or use the send button.</p>
+              <div className="flex items-end gap-3"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleDraftKeyDown} className="input min-h-11 max-h-32 flex-1 resize-y py-2.5" maxLength={2000} placeholder={`Message ${selectedConnection.name.split(" ")[0]}...`} aria-label="Write a message" /><button disabled={!draft.trim() || sending} className="btn-accent min-h-11 px-4 disabled:opacity-45" aria-label="Send message">{sending ? <LoaderCircle className="animate-spin" size={16} /> : <Send size={16} />}</button></div>
+              <p className="mt-2 text-[10px] text-muted">Press Enter to send. Shift+Enter adds a new line.</p>
             </form>
           </>}
         </section>
       </section>
+      {profileOpen && selectedConnection && <ConnectionProfileModal student={selectedConnection} onClose={() => setProfileOpen(false)} />}
     </div>
   );
 }

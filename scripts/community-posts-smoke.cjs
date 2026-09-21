@@ -12,6 +12,8 @@ assert.match(ui, /Open \$\{post\.author\}'s profile/, "Community post authors mu
 assert.match(ui, /\/network\/students\?q=/, "The profile dialog must load the live student profile");
 assert.match(ui, /\/network\/connections/, "The profile dialog must reuse the connection-request API");
 assert.doesNotMatch(ui, /<b>Career role:<\/b>|<b>Location:<\/b>/, "Community profiles must not expose career role or location");
+assert.match(ui, /document\.addEventListener\("mousedown", closeMenu\)/, "Post action menus must close when the user clicks outside them");
+assert.match(ui, /event\.key === "Escape"/, "Post action menus must also close with Escape");
 assert.match(workspace, /onOpenConnections=\{openCommunityConnection\}/, "Community profiles must open Connections & Inbox after requesting");
 assert.match(workspace, /setStudentSearch\(String\(student\.student_id\)\)/, "Connections & Inbox must preload the requested student");
 assert.match(workspace, /setPosts\(\(current\) => \[result\.post/, "Published posts should appear immediately without a reload");
