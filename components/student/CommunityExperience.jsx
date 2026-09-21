@@ -396,6 +396,9 @@ function PostCard({ post, viewer, onOpenProfile, onUpdate, onRemove, notify }) {
 
 export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify, viewer, onNewPost, onOpenConnections, postingStatus }) {
   const [profilePost, setProfilePost] = useState(null);
+  const [newPostsAbove, setNewPostsAbove] = useState(false);
+  const postFeedRef = useRef(null);
+  const knownPostIdsRef = useRef(null);
   const stats = useMemo(() => posts.reduce((result, post) => ({
     likes: result.likes + Number(post.likes || 0),
     comments: result.comments + Number(post.comments || 0),
@@ -404,28 +407,58 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
 
   const updatePost = (id, patch) => setPosts((current) => current.map((post) => Number(post.id) === Number(id) ? { ...post, ...patch } : post));
 
+  const isNearFeedTop = () => (postFeedRef.current?.scrollTop || 0) < 80;
+
+  const scrollToNewestPosts = (behavior = "smooth") => {
+    postFeedRef.current?.scrollTo({ top: 0, behavior });
+    setNewPostsAbove(false);
+  };
+
+  const handlePostFeedScroll = () => {
+    if (isNearFeedTop()) setNewPostsAbove(false);
+  };
+
+  useEffect(() => {
+    const currentIds = new Set(posts.map((post) => String(post.id)));
+    const previousIds = knownPostIdsRef.current;
+    knownPostIdsRef.current = currentIds;
+    if (!previousIds) return;
+    const hasNewPosts = posts.some((post) => !previousIds.has(String(post.id)));
+    if (!hasNewPosts) return;
+    if (isNearFeedTop()) {
+      window.requestAnimationFrame(() => scrollToNewestPosts());
+    } else {
+      setNewPostsAbove(true);
+    }
+  }, [posts]);
+
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_330px]">
-      <section className="space-y-4">
+      <section className="flex h-[70vh] min-h-[520px] max-h-[720px] flex-col">
         <button disabled={!postingStatus.canPost} onClick={onNewPost} className="panel flex w-full items-center gap-3 p-4 text-left disabled:cursor-not-allowed disabled:opacity-75">
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-plum text-xs font-extrabold text-white">{initials(viewer?.name)}</span>
           <span className="input flex min-h-10 items-center text-muted">{postingStatus.canPost ? "Share a question, insight or useful resource..." : postingStatus.disabled ? <span className="font-bold text-coral">{postingStatus.reason}</span> : <CommunityPostCooldown nextPostAt={postingStatus.nextPostAt} className="font-bold text-coral" />}</span>
           <span className={`btn-accent min-h-10 px-4 ${postingStatus.canPost ? "" : "opacity-40"}`}><Send size={15} /></span>
         </button>
-        {loading && <div className="panel py-16 text-center text-sm text-muted"><LoaderCircle className="mx-auto mb-3 animate-spin text-cobalt" size={25} /> Loading the live community...</div>}
-        {!loading && error && <div className="panel py-14 text-center"><AlertTriangle className="mx-auto text-coral" /><h2 className="mt-3 font-extrabold">Could not load the community</h2><p className="mt-1 text-xs text-muted">{error}</p><button onClick={onRetry} className="btn-secondary mt-5"><RefreshCw size={15} /> Try again</button></div>}
-        {!loading && !error && !posts.length && <EmptyFeed onNewPost={onNewPost} canPost={postingStatus.canPost} disabledReason={postingStatus.reason} />}
-        {!loading && !error && posts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            viewer={viewer}
-            notify={notify}
-            onOpenProfile={setProfilePost}
-            onUpdate={updatePost}
-            onRemove={(id) => setPosts((current) => current.filter((item) => Number(item.id) !== Number(id)))}
-          />
-        ))}
+        <div className="relative mt-4 min-h-0 flex-1">
+          <div ref={postFeedRef} onScroll={handlePostFeedScroll} className="h-full space-y-4 overflow-y-auto pr-1">
+            {loading && <div className="panel py-16 text-center text-sm text-muted"><LoaderCircle className="mx-auto mb-3 animate-spin text-cobalt" size={25} /> Loading the live community...</div>}
+            {!loading && error && <div className="panel py-14 text-center"><AlertTriangle className="mx-auto text-coral" /><h2 className="mt-3 font-extrabold">Could not load the community</h2><p className="mt-1 text-xs text-muted">{error}</p><button onClick={onRetry} className="btn-secondary mt-5"><RefreshCw size={15} /> Try again</button></div>}
+            {!loading && !error && !posts.length && <EmptyFeed onNewPost={onNewPost} canPost={postingStatus.canPost} disabledReason={postingStatus.reason} />}
+            {!loading && !error && posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                viewer={viewer}
+                notify={notify}
+                onOpenProfile={setProfilePost}
+                onUpdate={updatePost}
+                onRemove={(id) => setPosts((current) => current.filter((item) => Number(item.id) !== Number(id)))}
+              />
+            ))}
+          </div>
+          {newPostsAbove && <button onClick={() => scrollToNewestPosts()} className="btn-accent absolute left-1/2 top-4 min-h-9 -translate-x-1/2 px-3 text-xs shadow-lift"><RefreshCw size={14} /> New posts</button>}
+        </div>
       </section>
       <aside className="space-y-5">
         <div className="panel p-5">

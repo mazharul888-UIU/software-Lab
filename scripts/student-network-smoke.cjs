@@ -33,6 +33,9 @@ assert.match(ui, /deleteMessage/, "The inbox UI must provide per-message deletio
 assert.match(ui, /const handleDraftKeyDown/, "The inbox must handle the Enter key in its message composer");
 assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey/, "Enter should send while Shift+Enter keeps a line break");
 assert.match(ui, /onKeyDown=\{handleDraftKeyDown\}/, "The message composer must use the Enter-key handler");
+assert.match(ui, /chatWellRef/, "The inbox must keep a dedicated scrollable message area");
+assert.match(ui, /onScroll=\{handleChatScroll\}/, "Reading older messages must not prevent scrolling the chat history");
+assert.match(ui, /New messages/, "New messages must be easy to return to after reading older chats");
 assert.match(ui, /left !== null/, "Unconnected students must not be treated as a busy connection action");
 assert.match(ui, /connection-profile/, "Selecting a connection must expose its compact profile preview");
 assert.match(ui, /function ConnectionProfileModal/, "Connection profiles must open in a popup");

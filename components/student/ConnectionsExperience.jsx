@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  ArrowDown,
   Check,
   Facebook,
   Instagram,
@@ -140,7 +141,9 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
   const [deletingMessageId, setDeletingMessageId] = useState(null);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const messageEndRef = useRef(null);
+  const [newMessagesBelow, setNewMessagesBelow] = useState(false);
+  const chatWellRef = useRef(null);
+  const activeConversationRef = useRef(null);
 
   const selectedConnection = useMemo(
     () => network.connections.find((connection) => sameConnection(connection.connection_id, selectedConnectionId)) || null,
@@ -148,6 +151,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
   );
   const trimmedSearch = String(search || "").trim();
   const canSearch = /^\d+$/.test(trimmedSearch) || trimmedSearch.length >= 2;
+  const latestMessageId = messages[messages.length - 1]?.id || null;
 
   const loadNetwork = async ({ quiet = false } = {}) => {
     if (!quiet) {
@@ -225,16 +229,43 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
   useEffect(() => {
     if (!selectedConnectionId) {
       setMessages([]);
+      setNewMessagesBelow(false);
       return undefined;
     }
+    setMessages([]);
+    setNewMessagesBelow(false);
     loadMessages(selectedConnectionId);
     const timer = window.setInterval(() => loadMessages(selectedConnectionId, { quiet: true }), 7000);
     return () => window.clearInterval(timer);
   }, [selectedConnectionId]);
 
+  const isNearChatBottom = () => {
+    const chatWell = chatWellRef.current;
+    return !chatWell || chatWell.scrollHeight - chatWell.scrollTop - chatWell.clientHeight < 80;
+  };
+
+  const scrollToLatestMessage = (behavior = "smooth") => {
+    const chatWell = chatWellRef.current;
+    if (!chatWell) return;
+    chatWell.scrollTo({ top: chatWell.scrollHeight, behavior });
+    setNewMessagesBelow(false);
+  };
+
+  const handleChatScroll = () => {
+    if (isNearChatBottom()) setNewMessagesBelow(false);
+  };
+
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, selectedConnectionId]);
+    const chatWell = chatWellRef.current;
+    if (!chatWell) return;
+    const conversationChanged = activeConversationRef.current !== selectedConnectionId;
+    activeConversationRef.current = selectedConnectionId;
+    if (conversationChanged || isNearChatBottom()) {
+      window.requestAnimationFrame(() => scrollToLatestMessage(conversationChanged ? "auto" : "smooth"));
+    } else if (latestMessageId) {
+      setNewMessagesBelow(true);
+    }
+  }, [latestMessageId, selectedConnectionId]);
 
   const sendRequest = async (student) => {
     setBusyStudentId(student.student_id);
@@ -316,6 +347,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
       });
       setMessages((current) => [...current, message]);
       setDraft("");
+      window.requestAnimationFrame(() => scrollToLatestMessage());
       loadNetwork({ quiet: true });
     } catch (error) {
       notify(error.message);
@@ -389,7 +421,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
           <div className="panel p-5"><div className="flex items-center justify-between"><h2 className="font-extrabold">Your connections</h2><span className="tag !text-jade">{network.connections.length}</span></div>{networkLoading && <p className="mt-4 flex items-center gap-2 text-xs text-muted"><LoaderCircle className="animate-spin" size={15} /> Loading your inbox...</p>}{networkError && <div className="mt-4 rounded-2xl bg-coral/10 p-3 text-xs text-coral"><AlertTriangle className="mb-2" size={16} />{networkError}<button onClick={() => loadNetwork()} className="mt-2 block font-extrabold underline">Try again</button></div>}{!networkLoading && !networkError && !network.connections.length && <p className="mt-4 text-xs leading-5 text-muted">Your accepted connections will appear here. Search for a student to send the first request.</p>}<div className="mt-4 space-y-1">{network.connections.map((connection) => <button key={connection.connection_id} onClick={() => selectConnection(connection.connection_id)} className={`clay-connection-item flex w-full items-center gap-3 rounded-2xl p-3 text-left transition ${sameConnection(selectedConnectionId, connection.connection_id) ? "is-selected bg-cobalt text-white shadow-lg" : "hover:bg-ink/[0.045] dark:hover:bg-white/[0.05]"}`}><Avatar student={connection} /><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><b className="truncate text-sm">{connection.name}</b>{Number(connection.unread_count || 0) > 0 && <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-extrabold ${sameConnection(selectedConnectionId, connection.connection_id) ? "bg-white text-cobalt" : "bg-coral text-white"}`}>{connection.unread_count}</span>}</span><small className={`mt-0.5 block truncate ${sameConnection(selectedConnectionId, connection.connection_id) ? "text-white/65" : "text-muted"}`}>{connection.last_message || profileLine(connection)}</small></span></button>)}</div></div>
         </aside>
 
-        <section className="clay-chat-shell panel flex min-h-[620px] flex-col overflow-hidden p-0">
+        <section className="clay-chat-shell panel flex h-[70vh] min-h-[520px] max-h-[720px] flex-col overflow-hidden p-0">
           {!selectedConnection && <div className="m-auto max-w-sm px-6 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-[22px] bg-cobalt/10 text-cobalt"><MessageCircle size={28} /></span><h2 className="mt-5 text-xl font-extrabold">Your private inbox</h2><p className="mt-2 text-sm leading-6 text-muted">Accept a connection request or add a student to start a direct conversation.</p></div>}
           {selectedConnection && <>
             <header className="clay-chat-header flex items-center gap-3 border-b border-ink/[0.07] bg-white/45 px-5 py-4 dark:bg-white/[0.025]">
@@ -401,19 +433,21 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
                 <button onClick={removeConnection} className="btn-ghost min-h-9 px-2 text-xs text-muted hover:text-coral">Remove</button>
               </div>
             </header>
-            <div className="clay-chat-well flex-1 space-y-3 overflow-y-auto bg-canvas/45 px-5 py-5">
-              {messagesLoading && <p className="flex items-center justify-center gap-2 pt-12 text-xs text-muted"><LoaderCircle size={16} className="animate-spin" /> Loading conversation...</p>}
-              {messageError && <div className="mx-auto max-w-md rounded-2xl bg-coral/10 p-4 text-center text-xs text-coral"><AlertTriangle className="mx-auto mb-2" size={17} />{messageError}<button onClick={() => loadMessages(selectedConnection.connection_id)} className="mt-2 block w-full font-extrabold underline">Try again</button></div>}
-              {!messagesLoading && !messageError && !messages.length && <div className="mx-auto max-w-sm pt-20 text-center"><MessageCircle className="mx-auto text-cobalt/60" size={25} /><p className="mt-3 text-sm font-bold">Say hello to {selectedConnection.name.split(" ")[0]}.</p><p className="mt-1 text-xs text-muted">Your messages are private to this connection.</p></div>}
-              {messages.map((message) => {
-                const mine = Number(message.sender_id) === Number(currentUser.id);
-                const deleting = Number(deletingMessageId) === Number(message.id);
-                return <div key={message.id} className={`flex items-center gap-2 ${mine ? "justify-end" : "justify-start"}`}>
-                  {mine && <button disabled={deleting} onClick={() => deleteMessage(message)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-coral/10 hover:text-coral disabled:opacity-45" aria-label="Delete this message" title="Delete this message">{deleting ? <LoaderCircle size={14} className="animate-spin" /> : <Trash2 size={14} />}</button>}
-                  <div className={`clay-message max-w-[82%] rounded-[18px] px-4 py-3 text-sm shadow-sm ${mine ? "clay-message-outgoing rounded-br-md bg-cobalt text-white" : "clay-message-incoming rounded-bl-md bg-[#EEF2FF] text-[#172033] dark:bg-[#293044] dark:text-white"}`}><p className="whitespace-pre-wrap break-words leading-6">{message.body}</p><small className={`mt-1.5 block text-[10px] ${mine ? "text-white/60" : "text-[#566176] dark:text-white/70"}`}>{displayTime(message.created_at, true)}{mine && message.read_at ? " · Seen" : ""}</small></div>
-                </div>;
-              })}
-              <div ref={messageEndRef} />
+            <div className="relative min-h-0 flex-1">
+              <div ref={chatWellRef} onScroll={handleChatScroll} className="clay-chat-well h-full space-y-3 overflow-y-auto bg-canvas/45 px-5 py-5">
+                {messagesLoading && <p className="flex items-center justify-center gap-2 pt-12 text-xs text-muted"><LoaderCircle size={16} className="animate-spin" /> Loading conversation...</p>}
+                {messageError && <div className="mx-auto max-w-md rounded-2xl bg-coral/10 p-4 text-center text-xs text-coral"><AlertTriangle className="mx-auto mb-2" size={17} />{messageError}<button onClick={() => loadMessages(selectedConnection.connection_id)} className="mt-2 block w-full font-extrabold underline">Try again</button></div>}
+                {!messagesLoading && !messageError && !messages.length && <div className="mx-auto max-w-sm pt-20 text-center"><MessageCircle className="mx-auto text-cobalt/60" size={25} /><p className="mt-3 text-sm font-bold">Say hello to {selectedConnection.name.split(" ")[0]}.</p><p className="mt-1 text-xs text-muted">Your messages are private to this connection.</p></div>}
+                {messages.map((message) => {
+                  const mine = Number(message.sender_id) === Number(currentUser.id);
+                  const deleting = Number(deletingMessageId) === Number(message.id);
+                  return <div key={message.id} className={`flex items-center gap-2 ${mine ? "justify-end" : "justify-start"}`}>
+                    {mine && <button disabled={deleting} onClick={() => deleteMessage(message)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-coral/10 hover:text-coral disabled:opacity-45" aria-label="Delete this message" title="Delete this message">{deleting ? <LoaderCircle size={14} className="animate-spin" /> : <Trash2 size={14} />}</button>}
+                    <div className={`clay-message max-w-[82%] rounded-[18px] px-4 py-3 text-sm shadow-sm ${mine ? "clay-message-outgoing rounded-br-md bg-cobalt text-white" : "clay-message-incoming rounded-bl-md bg-[#EEF2FF] text-[#172033] dark:bg-[#293044] dark:text-white"}`}><p className="whitespace-pre-wrap break-words leading-6">{message.body}</p><small className={`mt-1.5 block text-[10px] ${mine ? "text-white/60" : "text-[#566176] dark:text-white/70"}`}>{displayTime(message.created_at, true)}{mine && message.read_at ? " · Seen" : ""}</small></div>
+                  </div>;
+                })}
+              </div>
+              {newMessagesBelow && <button onClick={() => scrollToLatestMessage()} className="btn-accent absolute bottom-4 left-1/2 min-h-9 -translate-x-1/2 px-3 text-xs shadow-lift"><ArrowDown size={14} /> New messages</button>}
             </div>
             <form onSubmit={sendMessage} className="clay-chat-composer border-t border-ink/[0.07] bg-white/45 p-4 dark:bg-white/[0.025]">
               <div className="flex items-end gap-3"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleDraftKeyDown} className="input min-h-11 max-h-32 flex-1 resize-y py-2.5" maxLength={2000} placeholder={`Message ${selectedConnection.name.split(" ")[0]}...`} aria-label="Write a message" /><button disabled={!draft.trim() || sending} className="btn-accent min-h-11 px-4 disabled:opacity-45" aria-label="Send message">{sending ? <LoaderCircle className="animate-spin" size={16} /> : <Send size={16} />}</button></div>
