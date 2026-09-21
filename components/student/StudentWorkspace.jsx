@@ -1070,6 +1070,21 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
 
   return (
     <div className="space-y-5">
+      <section className="panel p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="eyebrow"><BriefcaseBusiness size={13} /> Live opportunities</span>
+            <h2 className="mt-2 text-xl font-extrabold tracking-[-0.035em]">Top 3 live opportunities</h2>
+            <p className="mt-1 text-xs text-muted">Ranked by your AI match score and refreshed from live listings</p>
+          </div>
+          <button onClick={() => onNavigate("jobs")} className="btn-ghost">View all <ArrowRight size={15} /></button>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {topJobs.map((job) => <CompactJob key={job.id} job={job} onClick={() => onOpenJob(job)} />)}
+          {!topJobs.length && <div className="rounded-2xl border border-dashed border-ink/15 p-5 text-center text-xs text-muted md:col-span-3">No live opportunities match your profile yet.</div>}
+        </div>
+      </section>
+
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Metric icon={Target} label="Readiness score" value={`${readinessScore}%`} delta="Calculated from saved activity" tone="bg-cobalt" />
         <Metric icon={ListChecks} label="Assessment level" value={`Level ${adaptiveLevel}`} delta={`${metrics.assessmentScore || 0}% best score · ${adaptiveMaxLevel} levels`} tone="bg-jade" />
@@ -1176,17 +1191,6 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
       </section>
 
       <section className="space-y-5">
-        <div className="panel p-6">
-          <div className="mb-5 flex items-center justify-between">
-            <div><h2 className="text-lg font-extrabold tracking-[-0.03em]">Top 3 live opportunities</h2><p className="text-xs text-muted">Ranked by your AI match score and refreshed from live listings</p></div>
-            <button onClick={() => onNavigate("jobs")} className="btn-ghost">View all <ArrowRight size={15} /></button>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {topJobs.map((job) => <CompactJob key={job.id} job={job} onClick={() => onOpenJob(job)} />)}
-            {!topJobs.length && <div className="rounded-2xl border border-dashed border-ink/15 p-5 text-center text-xs text-muted md:col-span-3">No live opportunities match your profile yet.</div>}
-          </div>
-        </div>
-
         <div className="panel p-6">
           <div className="mb-5">
             <h2 className="text-lg font-extrabold tracking-[-0.03em]">Readiness calculation</h2>
