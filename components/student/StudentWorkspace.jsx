@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -576,8 +576,12 @@ export default function StudentWorkspace() {
         apiRequest("/community/posts"),
         apiRequest("/community/posting-status"),
       ]);
-      setPosts(nextPosts);
-      setPostingStatus(nextPostingStatus);
+      const applyCommunityUpdate = () => {
+        setPosts(nextPosts);
+        setPostingStatus(nextPostingStatus);
+      };
+      if (silent) startTransition(applyCommunityUpdate);
+      else applyCommunityUpdate();
       setCommunityError("");
     } catch (error) {
       if (!silent) setCommunityError(error.message);

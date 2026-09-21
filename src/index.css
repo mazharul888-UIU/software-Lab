@@ -3499,6 +3499,73 @@ textarea.input {
   }
 }
 
+/* Scrolling Community and inbox panels keep their own stable, unobtrusive scrollbars. */
+.smooth-scroll-panel {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #bcc0c4 transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.smooth-scroll-panel::-webkit-scrollbar {
+  width: 7px;
+}
+
+.smooth-scroll-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.smooth-scroll-panel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #bcc0c4;
+}
+
+.smooth-scroll-panel::-webkit-scrollbar-thumb:hover {
+  background: #8e949b;
+}
+
+.profile-modal-backdrop {
+  overscroll-behavior: contain;
+  animation: profile-backdrop-in 140ms ease-out;
+}
+
+.profile-modal-card {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: profile-card-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes profile-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes profile-card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+:root[data-theme="dark"] .smooth-scroll-panel {
+  scrollbar-color: #65676b transparent;
+}
+
+:root[data-theme="dark"] .smooth-scroll-panel::-webkit-scrollbar-thumb {
+  background: #65676b;
+}
+
+:root[data-theme="dark"] .smooth-scroll-panel::-webkit-scrollbar-thumb:hover {
+  background: #8a8d91;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-modal-backdrop,
+  .profile-modal-card {
+    animation: none;
+  }
+}
+
 @page {
   size: A4 portrait;
   margin: 12mm;
