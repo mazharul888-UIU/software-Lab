@@ -93,17 +93,6 @@ export default function DashboardShell({
         <Brand href={role === "admin" ? "/admin" : "/student"} />
         <button onClick={() => setMobileOpen(false)} className="btn-ghost md:hidden" aria-label="Close navigation"><X size={18} /></button>
       </div>
-      {role === "admin" && (
-        <div className="clay-sidebar-status mx-4 mb-4 rounded-2xl border border-ink/[0.07] bg-white/60 p-3">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted">Operations workspace</p>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="relative h-8 flex-1 overflow-hidden rounded-full bg-ink/[0.08]">
-              <div className="h-full w-[91%] rounded-full bg-plum" />
-            </div>
-            <b className="text-xs">Live</b>
-          </div>
-        </div>
-      )}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
         {navItems.map(({ id, label, icon: Icon, badge, group }, index) => (
           <div key={id}>
