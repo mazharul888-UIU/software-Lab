@@ -6,6 +6,7 @@ const route = fs.readFileSync("server/src/routes/student-network.js", "utf8");
 const ui = fs.readFileSync("components/student/ConnectionsExperience.jsx", "utf8");
 const workspace = fs.readFileSync("components/student/StudentWorkspace.jsx", "utf8");
 const shell = fs.readFileSync("components/DashboardShell.jsx", "utf8");
+const styles = fs.readFileSync("src/index.css", "utf8");
 
 assert.match(schema, /CREATE TABLE IF NOT EXISTS student_connections/, "Connection records need a database table");
 assert.match(schema, /UNIQUE KEY uq_student_connection_pair/, "A pair of students should only have one connection record");
@@ -36,10 +37,14 @@ assert.match(ui, /onKeyDown=\{handleDraftKeyDown\}/, "The message composer must 
 assert.match(ui, /chatWellRef/, "The inbox must keep a dedicated scrollable message area");
 assert.match(ui, /onScroll=\{handleChatScroll\}/, "Reading older messages must not prevent scrolling the chat history");
 assert.match(ui, /New messages/, "New messages must be easy to return to after reading older chats");
+assert.match(ui, /shouldPinToLatestRef/, "Inbox refreshes must preserve a reader's position in older messages");
+assert.match(ui, /setProfileOpen\(false\)/, "Opening a conversation should not unexpectedly cover it with a profile popup");
+assert.match(ui, /profile-modal-card/, "Connection profiles must use the polished profile modal");
+assert.match(styles, /overscroll-behavior: contain/, "Nested inbox scrolling must not spill into the page");
 assert.match(ui, /left !== null/, "Unconnected students must not be treated as a busy connection action");
 assert.match(ui, /connection-profile/, "Selecting a connection must expose its compact profile preview");
 assert.match(ui, /function ConnectionProfileModal/, "Connection profiles must open in a popup");
-assert.match(ui, /<div className="modal-backdrop" onClick=\{onClose\}/, "Clicking outside a connection profile must close it");
+assert.match(ui, /className="modal-backdrop profile-modal-backdrop" onClick=\{onClose\}/, "Clicking outside a connection profile must close it");
 assert.match(workspace, /id: "connections", label: "Connections & inbox"/, "The student workspace needs an inbox section");
 assert.match(shell, /Search students by name or ID/, "The top bar must support student search");
 

@@ -139,8 +139,8 @@ function CommunityMemberProfile({ post, viewer, onClose, onOpenConnections, noti
 
   const status = student?.connection_status;
   return (
-    <div className="modal-backdrop" onClick={onClose} role="presentation">
-      <section className="modal-card max-w-md" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="community-member-profile-title">
+    <div className="modal-backdrop profile-modal-backdrop" onClick={onClose} role="presentation">
+      <section tabIndex={-1} className="modal-card profile-modal-card max-w-md" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="community-member-profile-title">
         <div className="flex items-start justify-between gap-4">
           <span className={`grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl text-sm font-extrabold text-white ${authorTone(post.author_role, post.user_id)}`}>
             {student?.avatar || student?.avatar_url ? <img src={student.avatar || student.avatar_url} alt="" className="h-full w-full object-cover" /> : initials(post.author)}
@@ -399,6 +399,7 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
   const [newPostsAbove, setNewPostsAbove] = useState(false);
   const postFeedRef = useRef(null);
   const knownPostIdsRef = useRef(null);
+  const shouldPinToNewestRef = useRef(true);
   const stats = useMemo(() => posts.reduce((result, post) => ({
     likes: result.likes + Number(post.likes || 0),
     comments: result.comments + Number(post.comments || 0),
@@ -410,12 +411,15 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
   const isNearFeedTop = () => (postFeedRef.current?.scrollTop || 0) < 80;
 
   const scrollToNewestPosts = (behavior = "smooth") => {
+    shouldPinToNewestRef.current = true;
     postFeedRef.current?.scrollTo({ top: 0, behavior });
     setNewPostsAbove(false);
   };
 
   const handlePostFeedScroll = () => {
-    if (isNearFeedTop()) setNewPostsAbove(false);
+    const isNearTop = isNearFeedTop();
+    shouldPinToNewestRef.current = isNearTop;
+    if (isNearTop) setNewPostsAbove(false);
   };
 
   useEffect(() => {
@@ -425,7 +429,7 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
     if (!previousIds) return;
     const hasNewPosts = posts.some((post) => !previousIds.has(String(post.id)));
     if (!hasNewPosts) return;
-    if (isNearFeedTop()) {
+    if (shouldPinToNewestRef.current) {
       window.requestAnimationFrame(() => scrollToNewestPosts());
     } else {
       setNewPostsAbove(true);
@@ -441,7 +445,7 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
           <span className={`btn-accent min-h-10 px-4 ${postingStatus.canPost ? "" : "opacity-40"}`}><Send size={15} /></span>
         </button>
         <div className="relative mt-4 min-h-0 flex-1">
-          <div ref={postFeedRef} onScroll={handlePostFeedScroll} className="h-full space-y-4 overflow-y-auto pr-1">
+          <div ref={postFeedRef} onScroll={handlePostFeedScroll} className="smooth-scroll-panel h-full space-y-4 overflow-y-auto pr-1">
             {loading && <div className="panel py-16 text-center text-sm text-muted"><LoaderCircle className="mx-auto mb-3 animate-spin text-cobalt" size={25} /> Loading the live community...</div>}
             {!loading && error && <div className="panel py-14 text-center"><AlertTriangle className="mx-auto text-coral" /><h2 className="mt-3 font-extrabold">Could not load the community</h2><p className="mt-1 text-xs text-muted">{error}</p><button onClick={onRetry} className="btn-secondary mt-5"><RefreshCw size={15} /> Try again</button></div>}
             {!loading && !error && !posts.length && <EmptyFeed onNewPost={onNewPost} canPost={postingStatus.canPost} disabledReason={postingStatus.reason} />}
@@ -457,7 +461,7 @@ export function CommunityPage({ posts, setPosts, loading, error, onRetry, notify
               />
             ))}
           </div>
-          {newPostsAbove && <button onClick={() => scrollToNewestPosts()} className="btn-accent absolute left-1/2 top-4 min-h-9 -translate-x-1/2 px-3 text-xs shadow-lift"><RefreshCw size={14} /> New posts</button>}
+          {newPostsAbove && <button type="button" onClick={() => scrollToNewestPosts()} className="btn-accent absolute left-1/2 top-4 min-h-9 -translate-x-1/2 px-3 text-xs shadow-lift" aria-live="polite"><RefreshCw size={14} /> New posts</button>}
         </div>
       </section>
       <aside className="space-y-5">

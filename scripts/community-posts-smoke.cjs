@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const route = fs.readFileSync("server/src/routes/community.js", "utf8");
 const ui = fs.readFileSync("components/student/CommunityExperience.jsx", "utf8");
 const workspace = fs.readFileSync("components/student/StudentWorkspace.jsx", "utf8");
+const styles = fs.readFileSync("src/index.css", "utf8");
 
 assert.match(route, /p\.status='visible' OR \(p\.user_id=\? AND p\.status='pending_review'\)/, "Owners must see their posts awaiting review");
 assert.match(route, /post:\s*createdRows\[0\]/, "Post creation must return a renderable post");
@@ -17,6 +18,9 @@ assert.match(ui, /event\.key === "Escape"/, "Post action menus must also close w
 assert.match(ui, /postFeedRef/, "The community needs a dedicated scrollable post feed");
 assert.match(ui, /onScroll=\{handlePostFeedScroll\}/, "Students must be able to scroll back through older posts");
 assert.match(ui, /New posts/, "New community posts must be easy to return to");
+assert.match(ui, /shouldPinToNewestRef/, "Community refreshes must preserve a reader's position in older posts");
+assert.match(ui, /profile-modal-card/, "Community member profiles must use the polished profile modal");
+assert.match(styles, /\.smooth-scroll-panel/, "Community scrolling must use a stable dedicated scrollbar");
 assert.match(workspace, /window\.setInterval\(refresh, 15000\)/, "The community feed must refresh for new posts");
 assert.match(workspace, /onOpenConnections=\{openCommunityConnection\}/, "Community profiles must open Connections & Inbox after requesting");
 assert.match(workspace, /setStudentSearch\(String\(student\.student_id\)\)/, "Connections & Inbox must preload the requested student");

@@ -102,8 +102,8 @@ function ConnectionProfileModal({ student, onClose }) {
   }, [onClose]);
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="presentation">
-      <section id="connection-profile" className="modal-card max-w-lg" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="connection-profile-title">
+    <div className="modal-backdrop profile-modal-backdrop" onClick={onClose} role="presentation">
+      <section id="connection-profile" tabIndex={-1} className="modal-card profile-modal-card max-w-lg" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="connection-profile-title">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar student={student} size="h-14 w-14" />
@@ -144,6 +144,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
   const [newMessagesBelow, setNewMessagesBelow] = useState(false);
   const chatWellRef = useRef(null);
   const activeConversationRef = useRef(null);
+  const shouldPinToLatestRef = useRef(true);
 
   const selectedConnection = useMemo(
     () => network.connections.find((connection) => sameConnection(connection.connection_id, selectedConnectionId)) || null,
@@ -230,10 +231,12 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
     if (!selectedConnectionId) {
       setMessages([]);
       setNewMessagesBelow(false);
+      shouldPinToLatestRef.current = true;
       return undefined;
     }
     setMessages([]);
     setNewMessagesBelow(false);
+    shouldPinToLatestRef.current = true;
     loadMessages(selectedConnectionId);
     const timer = window.setInterval(() => loadMessages(selectedConnectionId, { quiet: true }), 7000);
     return () => window.clearInterval(timer);
@@ -247,12 +250,15 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
   const scrollToLatestMessage = (behavior = "smooth") => {
     const chatWell = chatWellRef.current;
     if (!chatWell) return;
+    shouldPinToLatestRef.current = true;
     chatWell.scrollTo({ top: chatWell.scrollHeight, behavior });
     setNewMessagesBelow(false);
   };
 
   const handleChatScroll = () => {
-    if (isNearChatBottom()) setNewMessagesBelow(false);
+    const isNearBottom = isNearChatBottom();
+    shouldPinToLatestRef.current = isNearBottom;
+    if (isNearBottom) setNewMessagesBelow(false);
   };
 
   useEffect(() => {
@@ -260,7 +266,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
     if (!chatWell) return;
     const conversationChanged = activeConversationRef.current !== selectedConnectionId;
     activeConversationRef.current = selectedConnectionId;
-    if (conversationChanged || isNearChatBottom()) {
+    if (conversationChanged || shouldPinToLatestRef.current) {
       window.requestAnimationFrame(() => scrollToLatestMessage(conversationChanged ? "auto" : "smooth"));
     } else if (latestMessageId) {
       setNewMessagesBelow(true);
@@ -345,9 +351,9 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
         method: "POST",
         body: JSON.stringify({ body }),
       });
+      shouldPinToLatestRef.current = true;
       setMessages((current) => [...current, message]);
       setDraft("");
-      window.requestAnimationFrame(() => scrollToLatestMessage());
       loadNetwork({ quiet: true });
     } catch (error) {
       notify(error.message);
@@ -394,7 +400,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
 
   const selectConnection = (connectionId) => {
     setSelectedConnectionId(connectionId);
-    setProfileOpen(true);
+    setProfileOpen(false);
   };
 
   return (
@@ -434,7 +440,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
               </div>
             </header>
             <div className="relative min-h-0 flex-1">
-              <div ref={chatWellRef} onScroll={handleChatScroll} className="clay-chat-well h-full space-y-3 overflow-y-auto bg-canvas/45 px-5 py-5">
+              <div ref={chatWellRef} onScroll={handleChatScroll} className="clay-chat-well smooth-scroll-panel h-full space-y-3 overflow-y-auto bg-canvas/45 px-5 py-5">
                 {messagesLoading && <p className="flex items-center justify-center gap-2 pt-12 text-xs text-muted"><LoaderCircle size={16} className="animate-spin" /> Loading conversation...</p>}
                 {messageError && <div className="mx-auto max-w-md rounded-2xl bg-coral/10 p-4 text-center text-xs text-coral"><AlertTriangle className="mx-auto mb-2" size={17} />{messageError}<button onClick={() => loadMessages(selectedConnection.connection_id)} className="mt-2 block w-full font-extrabold underline">Try again</button></div>}
                 {!messagesLoading && !messageError && !messages.length && <div className="mx-auto max-w-sm pt-20 text-center"><MessageCircle className="mx-auto text-cobalt/60" size={25} /><p className="mt-3 text-sm font-bold">Say hello to {selectedConnection.name.split(" ")[0]}.</p><p className="mt-1 text-xs text-muted">Your messages are private to this connection.</p></div>}
@@ -447,7 +453,7 @@ export default function ConnectionsPage({ search, setSearch, currentUser, notify
                   </div>;
                 })}
               </div>
-              {newMessagesBelow && <button onClick={() => scrollToLatestMessage()} className="btn-accent absolute bottom-4 left-1/2 min-h-9 -translate-x-1/2 px-3 text-xs shadow-lift"><ArrowDown size={14} /> New messages</button>}
+              {newMessagesBelow && <button type="button" onClick={() => scrollToLatestMessage()} className="btn-accent absolute bottom-4 left-1/2 min-h-9 -translate-x-1/2 px-3 text-xs shadow-lift" aria-live="polite"><ArrowDown size={14} /> New messages</button>}
             </div>
             <form onSubmit={sendMessage} className="clay-chat-composer border-t border-ink/[0.07] bg-white/45 p-4 dark:bg-white/[0.025]">
               <div className="flex items-end gap-3"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleDraftKeyDown} className="input min-h-11 max-h-32 flex-1 resize-y py-2.5" maxLength={2000} placeholder={`Message ${selectedConnection.name.split(" ")[0]}...`} aria-label="Write a message" /><button disabled={!draft.trim() || sending} className="btn-accent min-h-11 px-4 disabled:opacity-45" aria-label="Send message">{sending ? <LoaderCircle className="animate-spin" size={16} /> : <Send size={16} />}</button></div>
