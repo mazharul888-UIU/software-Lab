@@ -869,6 +869,11 @@ export default function StudentWorkspace() {
     if (value.trim()) setActive("connections");
   };
 
+  const openCommunityConnection = (student) => {
+    setStudentSearch(String(student.student_id));
+    setActive("connections");
+  };
+
   return (
     <>
       <DashboardShell
@@ -931,7 +936,7 @@ export default function StudentWorkspace() {
         )}
         {active === "analytics" && <AnalyticsPage notify={notify} data={overviewData} onNavigate={setActive} />}
         {active === "learning" && <LearningPage notify={notify} />}
-        {active === "community" && <CommunityPage posts={posts} setPosts={setPosts} loading={communityLoading} error={communityError} onRetry={loadCommunity} notify={notify} viewer={currentUser} onNewPost={() => setModal({ type: "post" })} postingStatus={postingStatus} />}
+        {active === "community" && <CommunityPage posts={posts} setPosts={setPosts} loading={communityLoading} error={communityError} onRetry={loadCommunity} notify={notify} viewer={currentUser} onNewPost={() => setModal({ type: "post" })} onOpenConnections={openCommunityConnection} postingStatus={postingStatus} />}
         {active === "connections" && <ConnectionsPage search={studentSearch} setSearch={setStudentSearch} currentUser={currentUser} notify={notify} />}
         {active === "events" && <EventsPage events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} reservingEventId={reservingEventId} cancellingEventId={cancellingEventId} onRegister={reserveEvent} onCancelReservation={cancelEventReservation} />}
         {active === "achievements" && <AchievementsPage />}
