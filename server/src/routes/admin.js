@@ -174,11 +174,11 @@ router.get("/overview", async (_req, res, next) => {
                     SUM(status='live' AND expires_at > NOW() AND expires_at <= DATE_ADD(NOW(), INTERVAL 7 DAY)) expiring_jobs
              FROM jobs WHERE created_by IS NOT NULL`),
       query(`SELECT COUNT(*) applications,
-                    SUM(status IN ('applied','in_review','assessment','interview')) active_applications
+                    SUM(a.status IN ('applied','in_review','assessment','interview')) active_applications
              FROM applications a JOIN jobs j ON j.id=a.job_id
              WHERE j.created_by IS NOT NULL AND a.status<>'withdrawn'`),
       query(`SELECT
-                (SELECT COUNT(*) FROM assessment_questions WHERE status='needs_review') review_questions,
+                (SELECT COUNT(*) FROM questions WHERE status='needs_review') review_questions,
                 (SELECT COUNT(*) FROM community_posts WHERE status IN ('pending_review','reported')) community_attention,
                 (SELECT COUNT(*) FROM content_reports WHERE status='open') open_reports`),
       query(`SELECT DATE(created_at) activity_date, COUNT(*) count
