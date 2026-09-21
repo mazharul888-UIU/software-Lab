@@ -4,6 +4,7 @@ const { authenticate } = require("../middleware/auth");
 const { ensureEventSchema } = require("../services/event-schema");
 const { getStudentPlaylistRecommendations, setStudentPlaylistState } = require("../services/youtube-playlists");
 const { getStudentSkillResources } = require("../services/youtube-resources");
+const { recordStudentActivity } = require("../services/student-performance");
 
 const router = express.Router();
 
@@ -86,6 +87,7 @@ router.post("/assessments/:id/submit", authenticate, async (req, res, next) => {
       "INSERT INTO assessment_attempts (user_id, assessment_id, score, total_points, percentage, started_at, completed_at) VALUES (?, ?, ?, ?, ?, ?, NOW())",
       [req.user.id, req.params.id, score, total, percentage, parsedStartedAt],
     );
+    await recordStudentActivity({ userId: req.user.id, type: "assessment", minutes: Math.max(5, Math.round((Date.now() - parsedStartedAt.getTime()) / 60000)) });
     res.json({ score, total, percentage, correctAnswers, questionCount: questions.length });
   } catch (error) { next(error); }
 });

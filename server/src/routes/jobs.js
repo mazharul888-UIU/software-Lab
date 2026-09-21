@@ -4,6 +4,7 @@ const { authenticate } = require("../middleware/auth");
 const { ensureJobSchema } = require("../services/job-schema");
 const { ensureMatchingSchema } = require("../services/matching-schema");
 const { getPlatformSettings } = require("../services/platform-settings");
+const { recordStudentActivity } = require("../services/student-performance");
 const { getBangladeshExternalJobs } = require("../services/external-job-search");
 const {
   profileForMatching,
@@ -356,6 +357,7 @@ router.post("/:jobId/apply", authenticate, async (req, res, next) => {
         // A third-party webhook must never prevent a student's application.
       }
     }
+    await recordStudentActivity({ userId: req.user.id, type: "application", minutes: 10 });
     res.status(201).json({
       message: "Application submitted",
       applicationCount: Number(applicationStats.application_count || 0),

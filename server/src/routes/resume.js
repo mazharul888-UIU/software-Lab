@@ -8,6 +8,7 @@ const {
   normalizeResumePhoto,
   parseStoredResume,
 } = require("../services/resume-profile");
+const { recordStudentActivity } = require("../services/student-performance");
 
 const router = express.Router();
 
@@ -68,6 +69,7 @@ router.patch("/", async (req, res, next) => {
        FROM student_resumes WHERE user_id=? LIMIT 1`,
       [req.user.id],
     );
+    await recordStudentActivity({ userId: req.user.id, type: "career_vault", minutes: 10 });
     res.json(responseFor(record, req.user, true));
   } catch (error) {
     next(error);

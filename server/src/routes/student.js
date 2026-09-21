@@ -10,6 +10,11 @@ const { MAX_LEVEL } = require("../services/gemini-assessment");
 const { parseStoredResume } = require("../services/resume-profile");
 const { generateCareerSkillPlan } = require("../services/student-career-plan");
 const {
+  ensureStudentPerformanceSchema,
+  recordStudentActivity,
+  getPerformanceSnapshot,
+} = require("../services/student-performance");
+const {
   average,
   calculateProfileCompletion,
   calculateReadiness,
@@ -34,6 +39,7 @@ router.get("/overview", async (req, res, next) => {
       ensureAdaptiveAssessmentSchema(),
       ensureJobSchema(),
       ensureResumeSchema(),
+      ensureStudentPerformanceSchema(),
     ]);
 
     const [
@@ -137,6 +143,13 @@ router.get("/overview", async (req, res, next) => {
       learningProgress,
     });
     const careerSkillPlan = await generateCareerSkillPlan(profile);
+    await recordStudentActivity({ userId: req.user.id, type: "dashboard", minutes: 1 });
+    const performance = await getPerformanceSnapshot(req.user.id, {
+      readinessScore,
+      assessmentScore: assessmentPerformance,
+      learningProgress,
+      applicationsActive: Number(applicationStats.active_count || 0),
+    });
 
     await query(
       "UPDATE student_profiles SET profile_completion=?, readiness_score=? WHERE user_id=?",
@@ -243,8 +256,55 @@ router.get("/overview", async (req, res, next) => {
       skillSignals,
       nextActions: nextActions.slice(0, 3),
       careerSkillPlan,
+      performance,
       generatedAt: new Date().toISOString(),
     });
+  } catch (error) { next(error); }
+});
+
+router.get("/performance", async (req, res, next) => {
+  try {
+    await ensureStudentPerformanceSchema();
+    const [savedReport] = await query(
+      `SELECT report_json FROM student_weekly_reports WHERE user_id=? ORDER BY week_start DESC LIMIT 1`,
+      [req.user.id],
+    );
+    let values = {};
+    try {
+      values = savedReport?.report_json && typeof savedReport.report_json === "object"
+        ? savedReport.report_json
+        : savedReport?.report_json ? JSON.parse(savedReport.report_json) : {};
+    } catch { values = {}; }
+    const snapshot = await getPerformanceSnapshot(req.user.id, values);
+    res.json(snapshot);
+  } catch (error) { next(error); }
+});
+
+router.post("/performance/activity", async (req, res, next) => {
+  try {
+    await recordStudentActivity({
+      userId: req.user.id,
+      type: req.body?.type || "general",
+      minutes: req.body?.minutes || 1,
+    });
+    res.status(201).json({ recorded: true });
+  } catch (error) { next(error); }
+});
+
+router.post("/performance/report", async (req, res, next) => {
+  try {
+    await ensureStudentPerformanceSchema();
+    const [profile] = await query(
+      `SELECT readiness_score FROM student_profiles WHERE user_id=? LIMIT 1`,
+      [req.user.id],
+    );
+    const performance = await getPerformanceSnapshot(req.user.id, {
+      readinessScore: profile?.readiness_score,
+      assessmentScore: req.body?.assessmentScore,
+      learningProgress: req.body?.learningProgress,
+      applicationsActive: req.body?.applicationsActive,
+    });
+    res.json({ saved: true, performance });
   } catch (error) { next(error); }
 });
 

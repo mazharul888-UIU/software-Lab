@@ -609,6 +609,37 @@ export default function StudentWorkspace() {
     window.setTimeout(() => setToast(""), 3200);
   };
 
+  const recordPerformanceActivity = async (type, minutes = 1) => {
+    try {
+      await apiRequest("/student/performance/activity", {
+        method: "POST",
+        body: JSON.stringify({ type, minutes }),
+      });
+      await loadOverview({ silent: true });
+    } catch {
+      // Activity tracking should never interrupt the learning flow.
+    }
+  };
+
+  const savePerformanceReport = async () => {
+    if (!overviewData) return;
+    try {
+      const result = await apiRequest("/student/performance/report", {
+        method: "POST",
+        body: JSON.stringify({
+          readinessScore: overviewData.readinessScore,
+          assessmentScore: overviewData.calculation?.assessmentPerformance,
+          learningProgress: overviewData.calculation?.learningProgress,
+          applicationsActive: overviewData.metrics?.applicationsActive,
+        }),
+      });
+      setOverviewData((current) => current ? { ...current, performance: result.performance || current.performance } : current);
+      notify("Weekly performance report saved.");
+    } catch (error) {
+      notify(error.message);
+    }
+  };
+
   const saveProfile = async (profile) => {
     try {
       const nextUser = await apiRequest("/auth/me", {
@@ -934,8 +965,8 @@ export default function StudentWorkspace() {
             onCompleteProfile={() => setActive("profile")}
           />
         )}
-        {active === "analytics" && <AnalyticsPage notify={notify} data={overviewData} onNavigate={setActive} />}
-        {active === "learning" && <LearningPage notify={notify} />}
+        {active === "analytics" && <AnalyticsPage notify={notify} data={overviewData} onNavigate={setActive} onSaveReport={savePerformanceReport} />}
+        {active === "learning" && <LearningPage notify={notify} onTrackActivity={recordPerformanceActivity} />}
         {active === "community" && <CommunityPage posts={posts} setPosts={setPosts} loading={communityLoading} error={communityError} onRetry={loadCommunity} notify={notify} viewer={currentUser} onNewPost={() => setModal({ type: "post" })} onOpenConnections={openCommunityConnection} postingStatus={postingStatus} />}
         {active === "connections" && <ConnectionsPage search={studentSearch} setSearch={setStudentSearch} currentUser={currentUser} notify={notify} />}
         {active === "events" && <EventsPage events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} reservingEventId={reservingEventId} cancellingEventId={cancellingEventId} onRegister={reserveEvent} onCancelReservation={cancelEventReservation} />}
@@ -1849,13 +1880,13 @@ function LegacyAssessmentsPage({ assessments, loading, error, onRetry, onStart }
 }
 
 const weeklyActivity = [
-  { day: "Mon", minutes: 46, detail: "2 learning activities", tone: "bg-cobalt" },
-  { day: "Tue", minutes: 72, detail: "Assessment practice", tone: "bg-cobalt" },
-  { day: "Wed", minutes: 38, detail: "Resource review", tone: "bg-jade" },
-  { day: "Thu", minutes: 84, detail: "Portfolio work", tone: "bg-cobalt" },
-  { day: "Fri", minutes: 58, detail: "Job research", tone: "bg-jade" },
-  { day: "Sat", minutes: 88, detail: "Learning sprint", tone: "bg-coral" },
-  { day: "Sun", minutes: 0, detail: "No activity yet", tone: "bg-ink/[0.1]" },
+  { day: "Mon", minutes: 0, detail: "No tracked activity", tone: "bg-cobalt" },
+  { day: "Tue", minutes: 0, detail: "No tracked activity", tone: "bg-cobalt" },
+  { day: "Wed", minutes: 0, detail: "No tracked activity", tone: "bg-jade" },
+  { day: "Thu", minutes: 0, detail: "No tracked activity", tone: "bg-cobalt" },
+  { day: "Fri", minutes: 0, detail: "No tracked activity", tone: "bg-jade" },
+  { day: "Sat", minutes: 0, detail: "No tracked activity", tone: "bg-coral" },
+  { day: "Sun", minutes: 0, detail: "No tracked activity", tone: "bg-ink/[0.1]" },
 ];
 
 function getWeekRange() {
@@ -1871,17 +1902,28 @@ function getWeekRange() {
     : `${month.format(monday)} ${day.format(monday)} – ${month.format(sunday)} ${day.format(sunday)}`;
 }
 
-function AnalyticsPage({ notify, data, onNavigate }) {
-  const [selectedDay, setSelectedDay] = useState(5);
+function AnalyticsPage({ notify, data, onNavigate, onSaveReport }) {
+  const performance = data?.performance || {};
+  const activitySource = Array.isArray(performance.days) && performance.days.length === 7 ? performance.days : weeklyActivity;
+  const activity = activitySource.map((item, index) => ({
+    ...item,
+    detail: item.detail || (item.activityTypes?.length ? item.activityTypes.join(", ") : "No tracked activity"),
+    tone: item.tone || ["bg-cobalt", "bg-cobalt", "bg-jade", "bg-cobalt", "bg-jade", "bg-coral", "bg-ink/[0.1]"][index],
+  }));
+  const [selectedDay, setSelectedDay] = useState(Number.isInteger(performance.todayIndex) ? performance.todayIndex : 5);
+  useEffect(() => {
+    if (Number.isInteger(performance.todayIndex)) setSelectedDay(performance.todayIndex);
+  }, [performance.todayIndex]);
   const metrics = data?.metrics || {};
   const calculation = data?.calculation || {};
-  const readinessScore = Math.round(Number(data?.readinessScore ?? 78));
-  const assessmentScore = Math.round(Number(calculation.assessmentPerformance ?? 83));
-  const learningProgress = Math.round(Number(calculation.learningProgress ?? 68));
-  const selected = weeklyActivity[selectedDay];
-  const maxMinutes = Math.max(...weeklyActivity.map((item) => item.minutes));
-  const totalMinutes = weeklyActivity.reduce((sum, item) => sum + item.minutes, 0);
-  const activeDays = weeklyActivity.filter((item) => item.minutes > 0).length;
+  const readinessScore = Math.round(Number(data?.readinessScore ?? 0));
+  const assessmentScore = Math.round(Number(calculation.assessmentPerformance ?? 0));
+  const learningProgress = Math.round(Number(calculation.learningProgress ?? 0));
+  const selected = activity[selectedDay] || activity[0];
+  const maxMinutes = Math.max(1, ...activity.map((item) => Number(item.minutes || 0)));
+  const totalMinutes = Number(performance.totalMinutes ?? activity.reduce((sum, item) => sum + Number(item.minutes || 0), 0));
+  const activeDays = Number(performance.activeDays ?? activity.filter((item) => item.minutes > 0).length);
+  const currentStreak = Number(performance.currentStreak ?? activeDays);
   const nextActions = data?.nextActions?.slice(0, 2) || [
     { id: "learning", title: "Complete one analytics project", detail: "Turn your work into portfolio evidence", target: "learning", tone: "bg-coral" },
     { id: "assessment", title: "Schedule your next assessment", detail: "Keep your strongest skills current", target: "assessments", tone: "bg-cobalt" },
@@ -1907,28 +1949,28 @@ function AnalyticsPage({ notify, data, onNavigate }) {
         <Metric icon={Activity} label="Learning progress" value={`${learningProgress}%`} delta={`${Number(metrics.resourcesCompleted || 0)} resources completed`} tone="bg-cobalt" />
         <Metric icon={ListChecks} label="Assessment score" value={`${assessmentScore}%`} delta={`${Number(metrics.assessmentsCompleted || 0)} verified results`} tone="bg-jade" />
         <Metric icon={Target} label="Career readiness" value={`${readinessScore}%`} delta="Calculated from saved activity" tone="bg-coral" />
-        <Metric icon={Flame} label="Weekly streak" value={`${activeDays}/7`} delta="One day to a full week" tone="bg-plum" />
+        <Metric icon={Flame} label="Weekly streak" value={`${currentStreak} day${currentStreak === 1 ? "" : "s"}`} delta={`${activeDays}/7 days active this week`} tone="bg-plum" />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
         <div className="panel p-6">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold">Weekly consistency</h2><p className="text-xs text-muted">Your focused work across the last seven days</p></div><span className="tag !bg-jade/10 !text-jade"><Flame size={12} /> {activeDays}/7 days active</span></div>
-          <div className="mt-7 grid grid-cols-7 gap-2 sm:gap-3">{weeklyActivity.map((item, index) => { const height = item.minutes ? Math.max(18, Math.round((item.minutes / maxMinutes) * 100)) : 8; const isSelected = selectedDay === index; return <button key={item.day} onClick={() => setSelectedDay(index)} aria-pressed={isSelected} className={`rounded-2xl border p-2 text-center transition sm:p-3 ${isSelected ? "border-cobalt/35 bg-cobalt/[0.08] shadow-sm" : "border-transparent hover:border-ink/[0.08] hover:bg-ink/[0.03]"}`}><span className={`block text-[10px] font-extrabold ${isSelected ? "text-cobalt" : "text-muted"}`}>{item.day}</span><span className="mt-3 flex h-28 items-end rounded-xl bg-ink/[0.045] p-1.5"><span className={`w-full rounded-lg transition-all duration-300 ${item.tone}`} style={{ height: `${height}%` }} /></span><b className="mt-2 block text-[10px]">{item.minutes ? `${item.minutes}m` : "Rest"}</b></button>; })}</div>
+          <div className="mt-7 grid grid-cols-7 gap-2 sm:gap-3">{activity.map((item, index) => { const height = item.minutes ? Math.max(18, Math.round((item.minutes / maxMinutes) * 100)) : 8; const isSelected = selectedDay === index; return <button key={item.date || item.day} onClick={() => setSelectedDay(index)} aria-pressed={isSelected} className={`rounded-2xl border p-2 text-center transition sm:p-3 ${isSelected ? "border-cobalt/35 bg-cobalt/[0.08] shadow-sm" : "border-transparent hover:border-ink/[0.08] hover:bg-ink/[0.03]"}`}><span className={`block text-[10px] font-extrabold ${isSelected ? "text-cobalt" : "text-muted"}`}>{item.day}</span><span className="mt-3 flex h-28 items-end rounded-xl bg-ink/[0.045] p-1.5"><span className={`w-full rounded-lg transition-all duration-300 ${item.tone}`} style={{ height: `${height}%` }} /></span><b className="mt-2 block text-[10px]">{item.minutes ? `${item.minutes}m` : "Rest"}</b></button>; })}</div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/[0.07] bg-white/55 p-4"><div className="flex items-center gap-3"><span className={`grid h-9 w-9 place-items-center rounded-xl text-white ${selected.minutes ? selected.tone : "bg-ink/30"}`}><Clock3 size={16} /></span><span><b className="block text-sm">{selected.day}: {selected.minutes ? `${selected.minutes} minutes focused` : "Rest day"}</b><small className="text-xs text-muted">{selected.detail}</small></span></div><span className="text-xs font-extrabold text-muted">{Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m this week</span></div>
         </div>
 
         <div className="panel p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold">Weekly performance report</h2><p className="text-xs text-muted">{weekRange}</p></div><button onClick={printReport} className="btn-secondary min-h-9"><Download size={14} /> PDF</button></div>
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold">Weekly performance report</h2><p className="text-xs text-muted">{weekRange}{performance.savedAt ? ` · saved ${new Date(performance.savedAt).toLocaleString()}` : ""}</p></div><div className="flex flex-wrap gap-2"><button onClick={onSaveReport} className="btn-secondary min-h-9"><Save size={14} /> Save report</button><button onClick={printReport} className="btn-secondary min-h-9"><Download size={14} /> PDF</button></div></div>
           <div className="mt-6 grid gap-4 sm:grid-cols-[.78fr_1.22fr]"><div className="rounded-[22px] bg-ink p-5 text-white"><span className="text-[10px] font-extrabold uppercase tracking-[.14em] text-white/55">Weekly score</span><b className="mt-3 block text-4xl tracking-[-.06em]">{readinessScore}<small className="text-lg text-white/55">/100</small></b><p className="mt-3 text-xs leading-5 text-white/65">Your saved profile, assessments and learning progress are moving in the right direction.</p></div><div className="grid gap-3 sm:grid-cols-3">{[["Assessment", `${assessmentScore}%`, "bg-jade/10 text-jade"], ["Learning", `${learningProgress}%`, "bg-cobalt/10 text-cobalt"], ["Applications", metrics.applicationsActive || 0, "bg-coral/10 text-coral"]].map(([label, value, tone]) => <div key={label} className={`rounded-2xl p-4 ${tone}`}><span className="text-[10px] font-extrabold uppercase tracking-[.12em]">{label}</span><b className="mt-3 block text-2xl tracking-[-.04em]">{value}</b><small className="mt-1 block text-[10px] opacity-80">{label === "Applications" ? "active now" : "current signal"}</small></div>)}</div></div>
           <div className="mt-5 rounded-2xl border border-ink/[0.07] bg-white/55 p-4"><div className="flex items-center justify-between gap-3"><div><b className="text-sm">Focus next</b><p className="mt-0.5 text-xs text-muted">Complete the small actions that strengthen your next application.</p></div><Target className="text-coral" size={19} /></div><div className="mt-3 space-y-2">{nextActions.map((action) => <button key={action.id} onClick={() => onNavigate(action.target)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-ink/[0.045]"><span className={`h-2.5 w-2.5 rounded-full ${action.tone}`} /><span className="min-w-0 flex-1"><b className="block text-xs">{action.title}</b><small className="text-[11px] text-muted">{action.detail}</small></span><ChevronRight className="text-muted" size={15} /></button>)}</div></div>
-          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-ink/[0.07] bg-white/55 p-4"><Lightbulb className="text-coral" size={20} /><p className="text-xs leading-5 text-muted"><b className="text-ink">AI insight:</b> Pair one learning session with a related assessment this week to turn progress into a stronger career signal.</p></div>
+          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-ink/[0.07] bg-white/55 p-4"><Lightbulb className="text-coral" size={20} /><p className="text-xs leading-5 text-muted"><b className="text-ink">Performance insight:</b> {activeDays ? `${activeDays} active day${activeDays === 1 ? "" : "s"} and ${totalMinutes} focused minute${totalMinutes === 1 ? "" : "s"} are saved this week.` : "Start an assessment, learning session or career task today to begin your weekly signal."}</p></div>
         </div>
       </section>
     </div>
   );
 }
 
-function LearningPage({ notify }) {
+function LearningPage({ notify, onTrackActivity }) {
   const [category, setCategory] = useState("All resources");
   const [skillQuery, setSkillQuery] = useState("");
   const [searchedSkill, setSearchedSkill] = useState("");
@@ -1964,7 +2006,7 @@ function LearningPage({ notify }) {
   return (
     <div className="space-y-5">
       <section className="panel grid overflow-hidden md:grid-cols-[1fr_.6fr]">
-        <div className="p-6 sm:p-8"><span className="eyebrow"><Target size={13} /> Personalized next step</span><h2 className="mt-3 text-2xl font-extrabold tracking-[-0.04em]">Finish SQL for Product Decisions</h2><p className="mt-2 max-w-lg text-sm leading-6 text-muted">Completing this course supports three of your top five job matches and closes your biggest analytics gap.</p><div className="mt-5 flex items-center gap-4"><button onClick={() => notify("Course resumed at lesson 7.")} className="btn-accent"><Play size={15} fill="currentColor" /> Continue learning</button><span className="text-xs font-bold text-muted">32 min left</span></div></div>
+        <div className="p-6 sm:p-8"><span className="eyebrow"><Target size={13} /> Personalized next step</span><h2 className="mt-3 text-2xl font-extrabold tracking-[-0.04em]">Finish SQL for Product Decisions</h2><p className="mt-2 max-w-lg text-sm leading-6 text-muted">Completing this course supports three of your top five job matches and closes your biggest analytics gap.</p><div className="mt-5 flex items-center gap-4"><button onClick={() => { onTrackActivity?.("learning", 20); notify("Course resumed at lesson 7."); }} className="btn-accent"><Play size={15} fill="currentColor" /> Continue learning</button><span className="text-xs font-bold text-muted">32 min left</span></div></div>
         <div className="relative hidden place-items-center bg-[#DED2BE] md:grid"><div className="grid h-36 w-36 place-items-center rounded-full border-[20px] border-cobalt bg-white/50"><span className="text-center"><b className="block text-2xl">68%</b><small className="text-[10px] font-bold text-muted">complete</small></span></div></div>
       </section>
       <section className="panel overflow-hidden p-5 sm:p-6">

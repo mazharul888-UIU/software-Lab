@@ -3,6 +3,7 @@ const express = require("express");
 const { query } = require("../config/db");
 const { authenticate } = require("../middleware/auth");
 const { ensureAdaptiveAssessmentSchema } = require("../services/adaptive-assessment-schema");
+const { recordStudentActivity } = require("../services/student-performance");
 const {
   LEVEL_CONFIG,
   MAX_LEVEL,
@@ -278,6 +279,7 @@ router.post("/attempts/:id/submit", async (req, res, next) => {
       ],
     );
     const program = await getProgram(req.user.id);
+    await recordStudentActivity({ userId: req.user.id, type: "adaptive_assessment", minutes: 15 });
     res.json({
       result: {
         level: Number(attempt.level_number),
