@@ -145,6 +145,12 @@ export default function AuthExperience({ role = "student" }) {
     try {
       if (mode === "register") {
         const result = await registerStudent({ name, email, password });
+        if (result.token && result.user) {
+          form.reset();
+          setShowPassword(false);
+          enterWorkspace(result.user, result.token);
+          return;
+        }
         const verification = {
           email: result.email || email,
           expiresAt: Date.now() + Number(result.expiresInSeconds || 600) * 1000,
