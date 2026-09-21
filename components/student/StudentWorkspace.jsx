@@ -1146,9 +1146,85 @@ function CompactJob({ job, onClick }) {
   );
 }
 
+const formatJobExpiry = (job) => {
+  if (job.application_mode === "external") return "Apply on the official source";
+  if (!job.expires_at) return "Open until filled";
+  const date = new Date(job.expires_at);
+  return Number.isNaN(date.getTime()) ? "Open until filled" : `Apply by ${date.toLocaleDateString()}`;
+};
+
+function JobOpportunityCard({ job, saved, onSave, onOpen }) {
+  const isExternal = job.application_mode === "external";
+  const highlights = [...(job.requirementsList || []), ...(job.responsibilitiesList || [])]
+    .map((item) => String(item).replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const isSaved = saved.includes(job.id);
+
+  return (
+    <article className="job-opportunity-card panel group p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glass">
+      <header className="flex min-w-0 items-start gap-4">
+        <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-base font-extrabold text-white ${job.tone}`} aria-hidden="true">{job.logo}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="line-clamp-2 text-base font-extrabold leading-5" title={job.title}>{job.title}</h3>
+              <p className="mt-1 truncate text-xs font-semibold text-muted">{job.company}</p>
+            </div>
+            <button
+              onClick={() => onSave(job.id)}
+              aria-label={`${isSaved ? "Remove" : "Save"} ${job.title}`}
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-ink/[0.08] transition ${isSaved ? "bg-cobalt text-white" : "bg-white/60 text-muted hover:border-cobalt/30 hover:text-cobalt"}`}
+            >
+              <Bookmark size={16} fill={isSaved ? "currentColor" : "none"} />
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-extrabold ${isExternal ? "bg-jade/10 text-jade" : "bg-ink/[0.06] text-muted"}`}>
+              {isExternal ? `Via ${job.source_name || "verified source"}` : "CareerCube role"}
+            </span>
+            {job.match_percentage != null && <span className="inline-flex items-center rounded-full bg-cobalt/10 px-2 py-1 text-[10px] font-extrabold text-cobalt">{job.match_percentage}% AI match</span>}
+            {job.already_applied && <span className="inline-flex items-center gap-1 rounded-full bg-jade/10 px-2 py-1 text-[10px] font-extrabold text-jade"><CheckCircle2 size={12} /> Applied</span>}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
+            {job.displayLocation && <span><MapPin className="mr-1 inline" size={12} />{job.displayLocation}</span>}
+            {job.type && <span><Clock3 className="mr-1 inline" size={12} />{job.type}</span>}
+          </div>
+        </div>
+      </header>
+
+      <div className="my-5 border-t border-ink/[0.07]" />
+
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-3 text-xs leading-5 text-muted">
+          {job.description || "Open this opportunity to view the complete role description and application details."}
+        </p>
+        {highlights.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {highlights.map((highlight, index) => <span className="job-opportunity-tag tag line-clamp-2" key={`${job.id}-highlight-${index}`}>{highlight}</span>)}
+          </div>
+        )}
+        {job.matched_skills?.length > 0 && <p className="mt-3 text-[11px] font-bold text-jade">Matches: {job.matched_skills.join(", ")}</p>}
+      </div>
+
+      <footer className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-ink/[0.07] pt-4">
+        <div>
+          <b className="block text-sm">{job.salary}</b>
+          <small className="text-[10px] text-muted">{formatJobExpiry(job)}</small>
+        </div>
+        <button onClick={() => onOpen(job)} className={`min-h-10 px-4 ${job.already_applied && !isExternal ? "btn-secondary !text-jade" : "btn-primary"}`}>
+          {isExternal ? "View source" : job.already_applied ? "Application sent" : "View & apply"}
+          {isExternal ? <ExternalLink size={15} /> : <ArrowRight size={15} />}
+        </button>
+      </footer>
+    </article>
+  );
+}
+
 function JobsPage({ jobs: availableJobs, recommendations, loading, error, onRetry, search, setSearch, type, setType, saved, onSave, onOpen }) {
   const filtered = useMemo(() => availableJobs.filter((job) => {
-    const matchesSearch = `${job.title} ${job.company} ${job.requirements}`.toLowerCase().includes(search.toLowerCase());
+    const searchableText = [job.title, job.company, job.requirements, job.responsibilities, ...(job.matched_skills || [])].filter(Boolean).join(" ");
+    const matchesSearch = searchableText.toLowerCase().includes(search.toLowerCase());
     const matchesType = type === "All types" || job.type === type;
     return matchesSearch && matchesType;
   }), [availableJobs, search, type]);
@@ -1198,29 +1274,8 @@ function JobsPage({ jobs: availableJobs, recommendations, loading, error, onRetr
       {!loading && error && <section className="panel grid min-h-64 place-items-center p-6 text-center"><div><AlertTriangle className="mx-auto text-coral" size={30} /><h2 className="mt-3 text-lg font-extrabold">Jobs could not be loaded</h2><p className="mt-1 max-w-md text-xs text-muted">{error}</p><button onClick={onRetry} className="btn-secondary mt-5"><RefreshCw size={14} /> Try again</button></div></section>}
       {!loading && !error && !filtered.length && <section className="panel grid min-h-64 place-items-center p-6 text-center"><div><BriefcaseBusiness className="mx-auto text-muted" size={32} /><h2 className="mt-3 text-lg font-extrabold">No jobs available</h2><p className="mt-1 max-w-md text-xs leading-5 text-muted">No live CareerCube roles or external listings match your filters right now. Check again later.</p></div></section>}
       {!loading && !error && filtered.length > 0 && (
-      <section className="grid gap-4 lg:grid-cols-2">
-        {filtered.map((job) => (
-          <article key={job.id} className="panel group p-5 transition hover:-translate-y-0.5 hover:shadow-glass">
-            <div className="flex items-start gap-4">
-              <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[18px] text-base font-extrabold text-white ${job.tone}`}>{job.logo}</span>
-              <div className="min-w-0 flex-1">
-                <div className="flex justify-between gap-3">
-                  <div className="min-w-0 flex-1"><h3 className="line-clamp-2 text-base font-extrabold leading-5" title={job.title}>{job.title}</h3><p className="mt-0.5 truncate text-xs font-semibold text-muted">{job.company}</p><div className="mt-2 flex flex-wrap gap-1.5">{job.match_percentage != null && <span className="inline-flex rounded-full bg-cobalt/10 px-2 py-1 text-[10px] font-extrabold text-cobalt">{job.match_percentage}% AI match</span>}{job.application_mode === "external" && <span className="inline-flex rounded-full bg-jade/10 px-2 py-1 text-[10px] font-extrabold text-jade">Via {job.source_name || "verified source"}</span>}</div></div>
-                  <button onClick={() => onSave(job.id)} aria-label={`Save ${job.title}`} className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-ink/[0.08] ${saved.includes(job.id) ? "bg-cobalt text-white" : "bg-white/60 text-muted"}`}><Bookmark size={16} fill={saved.includes(job.id) ? "currentColor" : "none"} /></button>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted"><span><MapPin className="mr-1 inline" size={12} />{job.displayLocation}</span><span><Clock3 className="mr-1 inline" size={12} />{job.type}</span></div>
-              </div>
-            </div>
-            <div className="my-5 border-t border-ink/[0.07]" />
-            <p className="line-clamp-2 text-xs leading-5 text-muted">{job.description}</p>
-            <div className="mt-4 flex flex-wrap gap-1.5">{job.requirementsList.slice(0, 4).map((requirement) => <span className="tag" key={requirement}>{requirement}</span>)}</div>
-            {job.matched_skills?.length > 0 && <p className="mt-3 text-[11px] font-bold text-jade">Matches: {job.matched_skills.join(", ")}</p>}
-            <div className="mt-5 flex items-center justify-between">
-              <span><b className="block text-sm">{job.salary}</b><small className="text-[10px] text-muted">{job.application_mode === "external" ? "Apply on the official source" : `Apply by ${new Date(job.expires_at).toLocaleDateString()}`}</small></span>
-              <button onClick={() => onOpen(job)} className={`min-h-10 px-4 ${job.already_applied ? "btn-secondary !text-jade" : "btn-primary"}`}>{job.application_mode === "external" ? "View source" : job.already_applied ? "Application sent" : "View & apply"} <ArrowRight size={15} /></button>
-            </div>
-          </article>
-        ))}
+      <section className="job-opportunity-grid grid gap-4 lg:grid-cols-2">
+        {filtered.map((job) => <JobOpportunityCard key={job.id} job={job} saved={saved} onSave={onSave} onOpen={onOpen} />)}
       </section>
       )}
     </div>
