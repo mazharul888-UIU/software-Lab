@@ -1197,11 +1197,18 @@ function Overview({ onNavigate, onOpenJob, jobs: availableJobs, data, loading, e
 }
 
 function Metric({ icon: Icon, label, value, delta, tone }) {
+  const variants = {
+    "bg-cobalt": "metric-card--cobalt",
+    "bg-jade": "metric-card--jade",
+    "bg-coral": "metric-card--coral",
+    "bg-plum": "metric-card--plum",
+  };
+
   return (
-    <article className="metric-card">
+    <article className={`metric-card ${variants[tone] || "metric-card--neutral"}`}>
       <div className="flex items-start justify-between">
-        <span className={`grid h-10 w-10 place-items-center rounded-2xl text-white ${tone}`}><Icon size={18} /></span>
-        <MoreHorizontal size={17} className="text-muted" />
+        <span className={`metric-card__icon grid h-10 w-10 place-items-center rounded-2xl text-white ${tone}`}><Icon size={18} /></span>
+        <MoreHorizontal size={17} className="metric-card__menu text-muted" />
       </div>
       <b className="mt-5 block text-2xl tracking-[-0.04em]">{value}</b>
       <p className="mt-0.5 text-xs font-bold">{label}</p>
