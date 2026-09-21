@@ -102,6 +102,9 @@ export default function AdminWorkspace() {
   const [applicationRecords, setApplicationRecords] = useState([]);
   const [applicationsLoading, setApplicationsLoading] = useState(true);
   const [applicationsError, setApplicationsError] = useState("");
+  const [overviewData, setOverviewData] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState("");
 
   const notify = (message) => {
     setToast(message);
@@ -290,6 +293,37 @@ export default function AdminWorkspace() {
     };
   }, []);
 
+  const loadOverview = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setOverviewLoading(true);
+      setOverviewError("");
+    }
+    try {
+      setOverviewData(await apiRequest("/admin/overview"));
+      setOverviewError("");
+    } catch (error) {
+      if (!silent) setOverviewError(error.message);
+    } finally {
+      if (!silent) setOverviewLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOverview();
+    const refresh = () => loadOverview({ silent: true });
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const interval = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, []);
+
   const saveAssessmentContent = async (entity, values, record) => {
     const path = `/admin/${entity}${record?.id ? `/${record.id}` : ""}`;
     await apiRequest(path, {
@@ -429,7 +463,7 @@ export default function AdminWorkspace() {
         subtitle={meta[active][1]}
         actions={addLabel ? <button onClick={() => setModal({ type: "create", entity: active })} className="btn-primary !bg-plum hover:!bg-[#64465b]"><Plus size={16} /> {addLabel}</button> : active === "performance" ? <button onClick={() => notify("Analytics report exported.")} className="btn-secondary"><Download size={15} /> Export report</button> : null}
       >
-        {active === "overview" && <AdminOverview onNavigate={setActive} assessments={assessmentRecords} questions={questionRecords} jobs={jobRecords} users={users} communityStats={communityData.stats} />}
+        {active === "overview" && <AdminOverview onNavigate={setActive} data={overviewData} loading={overviewLoading} error={overviewError} onRetry={loadOverview} />}
         {active === "users" && <UsersPage users={users} loading={usersLoading} error={usersError} onRetry={loadUsers} onStatus={changeUserStatus} />}
         {active === "assessments" && <AssessmentAdmin records={assessmentRecords} loading={contentLoading} error={contentError} onRetry={loadAssessmentContent} onEdit={(record) => setModal({ type: "edit", entity: "assessments", record })} onDelete={(record) => deleteAssessmentContent("assessments", record)} />}
         {active === "questions" && <QuestionsAdmin records={questionRecords} loading={contentLoading} error={contentError} onRetry={loadAssessmentContent} onEdit={(record) => setModal({ type: "edit", entity: "questions", record })} onDelete={(record) => deleteAssessmentContent("questions", record)} />}
@@ -459,7 +493,7 @@ export default function AdminWorkspace() {
   );
 }
 
-function AdminOverview({ onNavigate, assessments, questions, jobs, users, communityStats }) {
+function AdminOverview({ onNavigate, data, loading, error, onRetry, assessments = [], questions = [], jobs = [], users = [], communityStats = {} }) {
   const publishedAssessments = assessments.filter((assessment) => assessment.status === "published");
   const reviewQuestions = questions.filter((question) => question.status === "needs_review");
   const latestAssessment = assessments[0];
@@ -479,26 +513,36 @@ function AdminOverview({ onNavigate, assessments, questions, jobs, users, commun
     ...(latestAssessment ? [["Assessment updated", `${latestAssessment.title} · ${latestAssessment.status}`, "Latest", FileCheck2, "bg-jade"]] : []),
     ...(latestJob ? [["Job listing updated", `${latestJob.title} · ${latestJob.company_name}`, "Latest", BriefcaseBusiness, "bg-cobalt"]] : []),
     ...(Number(communityStats?.total || 0) ? [["Community activity", `${Number(communityStats.total)} real posts · ${Number(communityStats.visible || 0)} visible`, "Current", ShieldCheck, "bg-coral"]] : []),
-    ["Resource downloaded 100 times", "Product Analytics Field Guide", "1 hr", BookOpen, "bg-plum"],
   ];
+  if (loading && !data) return <section className="panel grid min-h-[420px] place-items-center"><div className="text-center"><RefreshCw className="mx-auto animate-spin text-plum" size={28} /><p className="mt-3 text-xs font-bold text-muted">Loading live operations data...</p></div></section>;
+  if (error && !data) return <section className="panel grid min-h-[420px] place-items-center"><div className="max-w-md text-center"><AlertTriangle className="mx-auto text-coral" size={30} /><h2 className="mt-3 text-lg font-extrabold">Operations overview could not be loaded</h2><p className="mt-2 text-xs text-muted">{error}</p><button onClick={() => onRetry()} className="btn-secondary mt-5"><RefreshCw size={14} /> Try again</button></div></section>;
+  const liveMetrics = data?.metrics || {};
+  const liveGrowth = Array.isArray(data?.growth) ? data.growth : [];
+  const liveServices = Array.isArray(data?.services) ? data.services : [];
+  const liveActivity = Array.isArray(data?.activity) ? data.activity : [];
+  const liveAttention = data?.attention || {};
+  const chartMaximum = Math.max(1, ...liveGrowth.flatMap((week) => [Number(week.newStudents || 0), Number(week.activeStudents || 0)]));
+  const activityTypes = { student: [Users, "bg-cobalt"], job: [BriefcaseBusiness, "bg-jade"], application: [FileText, "bg-coral"], community: [MessageCircle, "bg-plum"] };
+  const checkedAt = data?.checkedAt ? new Date(data.checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—";
   return (
     <div className="space-y-5">
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <AdminMetric label="Total students" value={users.length} delta={`${users.filter((user) => user.status === "active").length} active`} note="registered student accounts" icon={Users} tone="bg-cobalt" />
-        <AdminMetric label="Active assessments" value={publishedAssessments.length} delta={`${assessments.length} total`} note="published by administrators" icon={FileCheck2} tone="bg-jade" />
-        <AdminMetric label="Live jobs" value={liveJobs.length} delta={`${jobs.length} total`} note="visible, unexpired listings" icon={BriefcaseBusiness} tone="bg-coral" />
-        <AdminMetric label="Applications" value={totalApplications} delta="Actual" note="submitted to managed jobs" icon={FileText} tone="bg-plum" />
+        <AdminMetric label="Total students" value={liveMetrics.totalStudents || 0} delta={`${liveMetrics.activeStudents || 0} active`} note={`${liveMetrics.joinedThisWeek || 0} joined this week`} icon={Users} tone="bg-cobalt" />
+        <AdminMetric label="Active assessments" value={liveMetrics.activeAssessments || 0} delta={`${liveMetrics.totalAssessments || 0} total`} note="published and available to students" icon={FileCheck2} tone="bg-jade" />
+        <AdminMetric label="Live jobs" value={liveMetrics.liveJobs || 0} delta={`${liveMetrics.totalJobs || 0} total`} note="visible, unexpired managed listings" icon={BriefcaseBusiness} tone="bg-coral" />
+        <AdminMetric label="Applications" value={liveMetrics.applications || 0} delta={`${liveMetrics.activeApplications || 0} in progress`} note="submitted to managed jobs" icon={FileText} tone="bg-plum" />
       </section>
       <section className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]">
         <div className="panel p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold">Platform growth</h2><p className="text-xs text-muted">Student acquisition and weekly active users</p></div><select className="select min-h-9 w-36 py-0 text-xs"><option>Last 8 weeks</option><option>Last 6 months</option></select></div>
-          <div className="mt-7 flex h-56 items-end gap-3">{[["W1", 44, 31], ["W2", 56, 40], ["W3", 52, 43], ["W4", 68, 50], ["W5", 72, 58], ["W6", 78, 64], ["W7", 85, 70], ["W8", 94, 78]].map(([label, total, active]) => <div className="flex flex-1 items-end justify-center gap-1" key={label}><div className="w-[38%] rounded-t-md bg-sand" style={{ height: `${total}%` }} /><div className="w-[38%] rounded-t-md bg-cobalt" style={{ height: `${active}%` }} /><span className="absolute mt-5 self-end translate-y-5 text-[9px] font-bold text-muted">{label}</span></div>)}</div><div className="mt-8 flex gap-5 text-[10px] font-bold text-muted"><span><i className="mr-2 inline-block h-2 w-2 rounded-sm bg-sand" />New students</span><span><i className="mr-2 inline-block h-2 w-2 rounded-sm bg-cobalt" />Weekly active</span></div>
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold">Platform growth</h2><p className="text-xs text-muted">Actual registrations and weekly active students · last 8 weeks</p></div><button onClick={() => onRetry({ silent: true })} className="btn-ghost"><RefreshCw className={loading ? "animate-spin" : ""} size={15} /> Refresh</button></div>
+          <div className="mt-7 flex h-56 items-end gap-3 border-b border-ink/[0.07] pb-6">{liveGrowth.map((week) => { const studentHeight = Math.round((Number(week.newStudents || 0) / chartMaximum) * 100); const activeHeight = Math.round((Number(week.activeStudents || 0) / chartMaximum) * 100); return <div className="flex h-full flex-1 flex-col justify-end" key={week.weekStart}><div className="flex h-full items-end justify-center gap-1"><div title={`${week.newStudents} new students`} className="w-[38%] rounded-t-md bg-sand transition-[height]" style={{ height: `${studentHeight}%` }} /><div title={`${week.activeStudents} active students`} className="w-[38%] rounded-t-md bg-cobalt transition-[height]" style={{ height: `${activeHeight}%` }} /></div><span className="mt-3 text-center text-[9px] font-bold text-muted">{week.label}</span></div>; })}</div>
+          {!liveGrowth.length && <p className="mt-6 text-center text-xs text-muted">No growth data is available yet.</p>}<div className="mt-5 flex flex-wrap gap-5 text-[10px] font-bold text-muted"><span><i className="mr-2 inline-block h-2 w-2 rounded-sm bg-sand" />New students</span><span><i className="mr-2 inline-block h-2 w-2 rounded-sm bg-cobalt" />Weekly active</span></div>
         </div>
-        <div className="panel p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-extrabold">System health</h2><p className="text-xs text-muted">All services operational</p></div><span className="h-3 w-3 rounded-full bg-jade shadow-[0_0_0_6px_rgba(78,120,100,.12)]" /></div><div className="mt-6 space-y-4">{[["Web application", "99.99%", "Healthy"], ["Express API", "184ms", "Healthy"], ["MySQL database", "37%", "Healthy"], ["Python AI service", "212ms", "Healthy"]].map(([label, value, status]) => <div className="flex items-center justify-between border-b border-ink/[0.07] pb-3 last:border-0" key={label}><span><b className="block text-xs">{label}</b><small className="text-[10px] text-jade">{status}</small></span><b className="text-xs text-muted">{value}</b></div>)}</div></div>
+        <div className="panel p-6"><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold">System health</h2><p className="text-xs text-muted">Live check at {checkedAt}</p></div><span className={`h-3 w-3 rounded-full ${liveServices.some((service) => service.status === "unavailable") ? "bg-coral" : "bg-jade"} shadow-[0_0_0_6px_rgba(78,120,100,.12)]`} /></div><div className="mt-6 space-y-4">{liveServices.map((service) => <div className="flex items-center justify-between border-b border-ink/[0.07] pb-3 last:border-0" key={service.id}><span><b className="block text-xs">{service.label}</b><small className={`text-[10px] ${service.status === "healthy" || service.status === "configured" ? "text-jade" : "text-muted"}`}>{service.status === "configured" ? "Configured" : service.status === "fallback" ? "Fallback mode" : "Healthy"}</small></span><b className="text-xs text-muted">{service.detail}</b></div>)}</div></div>
       </section>
       <section className="grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
-        <div className="panel p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-extrabold">Needs attention</h2><p className="text-xs text-muted">Prioritized operational queue</p></div><span className="tag !bg-coral/10 !text-coral">{reviewQuestions.length} question reviews</span></div><div className="mt-5 space-y-3">{attentionItems.map(([Icon, text, action, page, tone]) => <button onClick={() => onNavigate(page)} key={text} className="flex w-full items-center gap-3 rounded-2xl border border-ink/[0.07] bg-white/55 p-3 text-left hover:bg-white"><span className={`grid h-9 w-9 place-items-center rounded-xl ${tone}`}><Icon size={16} /></span><b className="flex-1 text-xs">{text}</b><span className="text-[10px] font-bold text-muted">{action}</span><ChevronRight size={14} className="text-muted" /></button>)}</div></div>
-        <div className="panel p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-extrabold">Recent platform activity</h2><p className="text-xs text-muted">Live assessment activity with platform updates</p></div><button className="btn-ghost"><RefreshCw size={15} /></button></div><div className="mt-5 space-y-4">{recentActivity.map(([title, detail, time, Icon, tone]) => <div className="flex items-start gap-3" key={`${title}-${detail}`}><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white ${tone}`}><Icon size={15} /></span><span className="flex-1"><b className="block text-xs">{title}</b><small className="text-[10px] text-muted">{detail}</small></span><small className="text-[9px] font-bold text-muted">{time}</small></div>)}</div></div>
+        <div className="panel p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-extrabold">Needs attention</h2><p className="text-xs text-muted">Live operational queue</p></div><span className="tag !bg-coral/10 !text-coral">{Number(liveAttention.community || 0) + Number(liveAttention.expiringJobs || 0) + Number(liveAttention.reviewQuestions || 0)} open</span></div><div className="mt-5 space-y-3">{[[Flag, Number(liveAttention.community || 0) ? `${liveAttention.community} community items need attention` : "No community items need attention", "Review", "community", "text-coral bg-coral/10"], [BriefcaseBusiness, Number(liveAttention.expiringJobs || 0) ? `${liveAttention.expiringJobs} job listings expire within 7 days` : "No live jobs expire within 7 days", "Manage", "jobs", "text-cobalt bg-cobalt/10"], [FileQuestion, Number(liveAttention.reviewQuestions || 0) ? `${liveAttention.reviewQuestions} questions need review` : "No questions need review", "Open bank", "questions", "text-plum bg-plum/10"]].map(([Icon, text, action, page, tone]) => <button onClick={() => onNavigate(page)} key={page} className="flex w-full items-center gap-3 rounded-2xl border border-ink/[0.07] bg-white/55 p-3 text-left transition hover:bg-white"><span className={`grid h-9 w-9 place-items-center rounded-xl ${tone}`}><Icon size={16} /></span><b className="flex-1 text-xs">{text}</b><span className="text-[10px] font-bold text-muted">{action}</span><ChevronRight size={14} className="text-muted" /></button>)}</div></div>
+        <div className="panel p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-extrabold">Recent platform activity</h2><p className="text-xs text-muted">Latest database-backed activity</p></div><button onClick={() => onRetry({ silent: true })} className="btn-ghost" aria-label="Refresh activity"><RefreshCw className={loading ? "animate-spin" : ""} size={15} /></button></div><div className="mt-5 space-y-4">{liveActivity.map((item) => { const [Icon, tone] = activityTypes[item.type] || [Activity, "bg-ink"]; return <div className="flex items-start gap-3" key={`${item.type}-${item.occurredAt}-${item.detail}`}><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white ${tone}`}><Icon size={15} /></span><span className="min-w-0 flex-1"><b className="block text-xs">{item.title}</b><small className="block truncate text-[10px] text-muted">{item.detail}</small></span><small className="shrink-0 text-[9px] font-bold text-muted">{item.time}</small></div>; })}{!liveActivity.length && <div className="rounded-2xl border border-dashed border-ink/15 p-6 text-center text-xs text-muted">Activity will appear as students, jobs, applications and community posts are created.</div>}</div></div>
       </section>
     </div>
   );

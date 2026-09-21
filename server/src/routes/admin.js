@@ -8,6 +8,7 @@ const { ensureMatchingSchema } = require("../services/matching-schema");
 const { ensureEventSchema } = require("../services/event-schema");
 const { sanitizeSkillNames } = require("../services/job-matching");
 const { ensureCommunitySchema } = require("../services/community-schema");
+const { ensureStudentPerformanceSchema } = require("../services/student-performance");
 const { analyseContent } = require("../services/content-moderation");
 const { getPlatformSettings, savePlatformSettings } = require("../services/platform-settings");
 const {
@@ -110,6 +111,155 @@ const integrationStatus = () => ({
   database: "connected",
   aiService: process.env.AI_SERVICE_URL ? "configured" : "fallback",
   emailService: process.env.RESEND_API_KEY || process.env.SMTP_HOST ? "configured" : "not_configured",
+});
+
+const dateKey = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+const weekStartKey = (value) => {
+  const date = new Date(`${dateKey(value)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return dateKey(date);
+};
+
+const relativeTime = (value) => {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return "Recently";
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
+router.get("/overview", async (_req, res, next) => {
+  try {
+    const databaseStartedAt = Date.now();
+    await Promise.all([
+      ensureJobSchema(),
+      ensureProfileSchema(),
+      ensureMatchingSchema(),
+      ensureCommunitySchema(),
+      ensureStudentPerformanceSchema(),
+    ]);
+
+    const [
+      [studentStats],
+      [assessmentStats],
+      [jobStats],
+      [applicationStats],
+      [attentionStats],
+      newStudentsByDay,
+      activeStudentsByDay,
+      recentStudents,
+      recentJobs,
+      recentApplications,
+      recentPosts,
+    ] = await Promise.all([
+      query(`SELECT COUNT(*) total_students,
+                    SUM(status='active') active_students,
+                    SUM(created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) joined_this_week
+             FROM users WHERE role='student'`),
+      query("SELECT COUNT(*) total_assessments, SUM(status='published') active_assessments FROM assessments"),
+      query(`SELECT COUNT(*) total_jobs,
+                    SUM(status='live' AND expires_at > NOW()) live_jobs,
+                    SUM(status='live' AND expires_at > NOW() AND expires_at <= DATE_ADD(NOW(), INTERVAL 7 DAY)) expiring_jobs
+             FROM jobs WHERE created_by IS NOT NULL`),
+      query(`SELECT COUNT(*) applications,
+                    SUM(status IN ('applied','in_review','assessment','interview')) active_applications
+             FROM applications a JOIN jobs j ON j.id=a.job_id
+             WHERE j.created_by IS NOT NULL AND a.status<>'withdrawn'`),
+      query(`SELECT
+                (SELECT COUNT(*) FROM assessment_questions WHERE status='needs_review') review_questions,
+                (SELECT COUNT(*) FROM community_posts WHERE status IN ('pending_review','reported')) community_attention,
+                (SELECT COUNT(*) FROM content_reports WHERE status='open') open_reports`),
+      query(`SELECT DATE(created_at) activity_date, COUNT(*) count
+             FROM users
+             WHERE role='student' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 WEEK)
+             GROUP BY DATE(created_at)`),
+      query(`SELECT activity_date, COUNT(DISTINCT user_id) count
+             FROM student_activity_days
+             WHERE activity_date >= DATE_SUB(CURDATE(), INTERVAL 7 WEEK)
+             GROUP BY activity_date`),
+      query("SELECT name, created_at FROM users WHERE role='student' ORDER BY created_at DESC LIMIT 4"),
+      query("SELECT title, company_name, created_at FROM jobs WHERE created_by IS NOT NULL ORDER BY created_at DESC LIMIT 3"),
+      query(`SELECT a.created_at, u.name student_name, j.title job_title
+             FROM applications a
+             JOIN users u ON u.id=a.user_id
+             JOIN jobs j ON j.id=a.job_id
+             WHERE j.created_by IS NOT NULL AND a.status<>'withdrawn'
+             ORDER BY a.created_at DESC LIMIT 3`),
+      query(`SELECT p.created_at, u.name author
+             FROM community_posts p JOIN users u ON u.id=p.user_id
+             ORDER BY p.created_at DESC LIMIT 3`),
+    ]);
+
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const weekly = Array.from({ length: 8 }, (_, index) => {
+      const week = new Date(monday);
+      week.setDate(monday.getDate() - ((7 - index) * 7));
+      return { weekStart: dateKey(week), label: new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(week), newStudents: 0, activeStudents: 0 };
+    });
+    const weeklyByStart = new Map(weekly.map((week) => [week.weekStart, week]));
+    newStudentsByDay.forEach((row) => {
+      const week = weeklyByStart.get(weekStartKey(row.activity_date));
+      if (week) week.newStudents += Number(row.count || 0);
+    });
+    activeStudentsByDay.forEach((row) => {
+      const week = weeklyByStart.get(weekStartKey(row.activity_date));
+      if (week) week.activeStudents = Math.max(week.activeStudents, Number(row.count || 0));
+    });
+
+    const activity = [
+      ...recentStudents.map((row) => ({ type: "student", title: "Student joined", detail: row.name, occurredAt: row.created_at })),
+      ...recentJobs.map((row) => ({ type: "job", title: "Job published", detail: `${row.title} · ${row.company_name || "CareerCube"}`, occurredAt: row.created_at })),
+      ...recentApplications.map((row) => ({ type: "application", title: "Application submitted", detail: `${row.student_name} · ${row.job_title}`, occurredAt: row.created_at })),
+      ...recentPosts.map((row) => ({ type: "community", title: "Community post published", detail: row.author, occurredAt: row.created_at })),
+    ]
+      .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())
+      .slice(0, 6)
+      .map((item) => ({ ...item, time: relativeTime(item.occurredAt) }));
+
+    const databaseLatency = Math.max(1, Date.now() - databaseStartedAt);
+    const aiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.AI_SERVICE_URL);
+    res.json({
+      metrics: {
+        totalStudents: Number(studentStats?.total_students || 0),
+        activeStudents: Number(studentStats?.active_students || 0),
+        joinedThisWeek: Number(studentStats?.joined_this_week || 0),
+        activeAssessments: Number(assessmentStats?.active_assessments || 0),
+        totalAssessments: Number(assessmentStats?.total_assessments || 0),
+        liveJobs: Number(jobStats?.live_jobs || 0),
+        totalJobs: Number(jobStats?.total_jobs || 0),
+        applications: Number(applicationStats?.applications || 0),
+        activeApplications: Number(applicationStats?.active_applications || 0),
+      },
+      growth: weekly,
+      attention: {
+        community: Number(attentionStats?.community_attention || 0) + Number(attentionStats?.open_reports || 0),
+        expiringJobs: Number(jobStats?.expiring_jobs || 0),
+        reviewQuestions: Number(attentionStats?.review_questions || 0),
+      },
+      activity,
+      services: [
+        { id: "api", label: "CareerCube API", status: "healthy", detail: "Responding now" },
+        { id: "database", label: "Database", status: "healthy", detail: `${databaseLatency} ms query` },
+        { id: "ai", label: "AI guidance", status: aiConfigured ? "configured" : "fallback", detail: aiConfigured ? "Provider configured" : "Rules-based fallback" },
+      ],
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (error) { next(error); }
 });
 
 router.get("/settings", async (_req, res, next) => {
