@@ -190,7 +190,9 @@ router.get("/overview", async (_req, res, next) => {
              WHERE activity_date >= DATE_SUB(CURDATE(), INTERVAL 7 WEEK)
              GROUP BY activity_date`),
       query("SELECT name, created_at FROM users WHERE role='student' ORDER BY created_at DESC LIMIT 4"),
-      query("SELECT title, company_name, created_at FROM jobs WHERE created_by IS NOT NULL ORDER BY created_at DESC LIMIT 3"),
+      query(`SELECT j.title, c.name company_name, j.created_at
+             FROM jobs j JOIN companies c ON c.id=j.company_id
+             WHERE j.created_by IS NOT NULL ORDER BY j.created_at DESC LIMIT 3`),
       query(`SELECT a.created_at, u.name student_name, j.title job_title
              FROM applications a
              JOIN users u ON u.id=a.user_id
