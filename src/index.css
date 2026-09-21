@@ -3628,20 +3628,31 @@ html.applicant-cv-modal-open body {
   scrollbar-gutter: stable;
 }
 
-/* Available jobs cards stay content-sized inside the two-column grid. The
-   previous stretch behaviour made a short internal role inherit the height of
-   a long external listing, leaving a distracting empty block below it. */
+/* Keep each row visually balanced while allowing long external listings to
+   wrap safely instead of pushing the card and action button off-screen. */
 .job-opportunity-grid {
-  align-items: start;
+  align-items: stretch;
 }
 
 .job-opportunity-card {
-  align-self: start;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
 }
 
+.job-opportunity-card footer {
+  margin-top: auto;
+}
+
+.job-opportunity-card footer button {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
 .job-opportunity-tag {
+  min-width: 0;
   max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;

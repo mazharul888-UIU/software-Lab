@@ -1153,10 +1153,15 @@ const formatJobExpiry = (job) => {
   return Number.isNaN(date.getTime()) ? "Open until filled" : `Apply by ${date.toLocaleDateString()}`;
 };
 
+const shortenJobHighlight = (value) => {
+  const normalized = String(value).replace(/\s+/g, " ").trim();
+  return normalized.length > 76 ? `${normalized.slice(0, 73).trimEnd()}…` : normalized;
+};
+
 function JobOpportunityCard({ job, saved, onSave, onOpen }) {
   const isExternal = job.application_mode === "external";
   const highlights = [...(job.requirementsList || []), ...(job.responsibilitiesList || [])]
-    .map((item) => String(item).replace(/\s+/g, " ").trim())
+    .map(shortenJobHighlight)
     .filter(Boolean)
     .slice(0, 3);
   const isSaved = saved.includes(job.id);
@@ -1208,7 +1213,7 @@ function JobOpportunityCard({ job, saved, onSave, onOpen }) {
       </div>
 
       <footer className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-ink/[0.07] pt-4">
-        <div>
+        <div className="min-w-0">
           <b className="block text-sm">{job.salary}</b>
           <small className="text-[10px] text-muted">{formatJobExpiry(job)}</small>
         </div>
