@@ -14,6 +14,10 @@ assert.match(ui, /\/network\/connections/, "The profile dialog must reuse the co
 assert.doesNotMatch(ui, /<b>Career role:<\/b>|<b>Location:<\/b>/, "Community profiles must not expose career role or location");
 assert.match(ui, /document\.addEventListener\("mousedown", closeMenu\)/, "Post action menus must close when the user clicks outside them");
 assert.match(ui, /event\.key === "Escape"/, "Post action menus must also close with Escape");
+assert.match(ui, /postFeedRef/, "The community needs a dedicated scrollable post feed");
+assert.match(ui, /onScroll=\{handlePostFeedScroll\}/, "Students must be able to scroll back through older posts");
+assert.match(ui, /New posts/, "New community posts must be easy to return to");
+assert.match(workspace, /window\.setInterval\(refresh, 15000\)/, "The community feed must refresh for new posts");
 assert.match(workspace, /onOpenConnections=\{openCommunityConnection\}/, "Community profiles must open Connections & Inbox after requesting");
 assert.match(workspace, /setStudentSearch\(String\(student\.student_id\)\)/, "Connections & Inbox must preload the requested student");
 assert.match(workspace, /setPosts\(\(current\) => \[result\.post/, "Published posts should appear immediately without a reload");
