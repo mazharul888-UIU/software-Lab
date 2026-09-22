@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   ArrowDown,
@@ -93,7 +94,10 @@ function PersonResult({ student, onConnect, onAccept, onDecline, onCancel, onMes
 }
 
 function ConnectionProfileModal({ student, onClose }) {
+  const dialogRef = useRef(null);
+
   useEffect(() => {
+    dialogRef.current?.focus();
     const closeOnEscape = (event) => {
       if (event.key === "Escape") onClose();
     };
@@ -101,9 +105,9 @@ function ConnectionProfileModal({ student, onClose }) {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div className="modal-backdrop profile-modal-backdrop" onClick={onClose} role="presentation">
-      <section id="connection-profile" tabIndex={-1} className="modal-card profile-modal-card max-w-lg" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="connection-profile-title">
+      <section ref={dialogRef} id="connection-profile" tabIndex={-1} className="modal-card profile-modal-card max-w-lg" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="connection-profile-title">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar student={student} size="h-14 w-14" />
@@ -120,7 +124,7 @@ function ConnectionProfileModal({ student, onClose }) {
         {connectionSocialFields.some(({ key }) => student[key]) && <div className="mt-5"><b className="text-sm">Social links</b><ConnectionSocialLinks student={student} /></div>}
       </section>
     </div>
-  );
+  , document.body);
 }
 
 export default function ConnectionsPage({ search, setSearch, currentUser, notify }) {

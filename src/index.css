@@ -3526,11 +3526,14 @@ textarea.input {
 }
 
 .profile-modal-backdrop {
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   overscroll-behavior: contain;
   animation: profile-backdrop-in 140ms ease-out;
 }
 
 .profile-modal-card {
+  margin: 0;
+  width: min(100%, 42rem);
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
   overscroll-behavior: contain;

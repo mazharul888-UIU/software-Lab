@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   ArrowRight,
@@ -86,6 +87,7 @@ function CommunityMemberProfile({ post, viewer, onClose, onOpenConnections, noti
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [savingConnection, setSavingConnection] = useState(false);
+  const dialogRef = useRef(null);
   const isStudent = post?.author_role === "student";
   const isOwnProfile = Number(post?.user_id) === Number(viewer?.id);
 
@@ -120,6 +122,15 @@ function CommunityMemberProfile({ post, viewer, onClose, onOpenConnections, noti
     return () => { cancelled = true; };
   }, [isOwnProfile, isStudent, post]);
 
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
   const sendConnectionRequest = async () => {
     if (!student?.student_id || savingConnection) return;
     setSavingConnection(true);
@@ -138,9 +149,9 @@ function CommunityMemberProfile({ post, viewer, onClose, onOpenConnections, noti
   };
 
   const status = student?.connection_status;
-  return (
+  return createPortal(
     <div className="modal-backdrop profile-modal-backdrop" onClick={onClose} role="presentation">
-      <section tabIndex={-1} className="modal-card profile-modal-card max-w-md" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="community-member-profile-title">
+      <section ref={dialogRef} tabIndex={-1} className="modal-card profile-modal-card max-w-md" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="community-member-profile-title">
         <div className="flex items-start justify-between gap-4">
           <span className={`grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl text-sm font-extrabold text-white ${authorTone(post.author_role, post.user_id)}`}>
             {student?.avatar || student?.avatar_url ? <img src={student.avatar || student.avatar_url} alt="" className="h-full w-full object-cover" /> : initials(post.author)}
@@ -168,7 +179,7 @@ function CommunityMemberProfile({ post, viewer, onClose, onOpenConnections, noti
         </>}
       </section>
     </div>
-  );
+  , document.body);
 }
 
 function PostCard({ post, viewer, onOpenProfile, onUpdate, onRemove, notify }) {
