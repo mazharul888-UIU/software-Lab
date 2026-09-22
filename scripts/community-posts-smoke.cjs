@@ -20,6 +20,7 @@ assert.match(ui, /onScroll=\{handlePostFeedScroll\}/, "Students must be able to 
 assert.match(ui, /New posts/, "New community posts must be easy to return to");
 assert.match(ui, /shouldPinToNewestRef/, "Community refreshes must preserve a reader's position in older posts");
 assert.match(ui, /profile-modal-card/, "Community member profiles must use the polished profile modal");
+assert.match(ui, /createPortal/, "Community profiles must render outside the scrollable feed layout");
 assert.match(styles, /\.smooth-scroll-panel/, "Community scrolling must use a stable dedicated scrollbar");
 assert.match(workspace, /window\.setInterval\(refresh, 15000\)/, "The community feed must refresh for new posts");
 assert.match(workspace, /onOpenConnections=\{openCommunityConnection\}/, "Community profiles must open Connections & Inbox after requesting");

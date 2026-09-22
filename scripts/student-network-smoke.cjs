@@ -40,6 +40,7 @@ assert.match(ui, /New messages/, "New messages must be easy to return to after r
 assert.match(ui, /shouldPinToLatestRef/, "Inbox refreshes must preserve a reader's position in older messages");
 assert.match(ui, /setProfileOpen\(false\)/, "Opening a conversation should not unexpectedly cover it with a profile popup");
 assert.match(ui, /profile-modal-card/, "Connection profiles must use the polished profile modal");
+assert.match(ui, /createPortal/, "Connection profiles must render outside the scrollable inbox layout");
 assert.match(styles, /overscroll-behavior: contain/, "Nested inbox scrolling must not spill into the page");
 assert.match(ui, /left !== null/, "Unconnected students must not be treated as a busy connection action");
 assert.match(ui, /connection-profile/, "Selecting a connection must expose its compact profile preview");
